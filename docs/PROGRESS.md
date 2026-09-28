@@ -2,9 +2,50 @@
 
 ## Status
 
-**Current phase:** Phase 0 — complete. Exit gate is green (`pnpm install`, `pnpm typecheck`,
-`pnpm lint`, `pnpm test`, `pnpm check:arch` all pass; `docs/VERIFY.md` has no unresolved
-"TODO: verify" rows). Awaiting human sign-off to start Phase 1.
+**Current phase:** Phase 1 — complete. Exit gate is green (`pnpm db:migrate`,
+`pnpm test --filter @thesauros/policy --filter @thesauros/db`, `pnpm check:arch`; the full
+`pnpm typecheck`/`pnpm lint`/`pnpm test` also stay green). Awaiting human sign-off to start Phase 2.
+
+### Phase 1 task checklist
+
+- [x] 1. `packages/db/src/schema.ts`: `chain_id` added to `recipients` and `executions`
+      (`destChainId` too, for a CCTP payout's source/destination pair); `wallets`'s chain-id check
+      constraint, and every hardcoded Base chain-id literal across `shared`/`policy`/`risk`/`db`,
+      corrected to Arc's real ids (5042002 testnet / 5042 mainnet, `docs/VERIFY.md` rows 1 & 13) —
+      these were still Base Sepolia/Base mainnet (84532/8453), which was a live correctness bug in
+      I8's mainnet gate and I11's demo fencing, not just a rename. New `paymaster_policies` table
+      (Circle Paymaster policy: per-tx/daily caps, sponsor mode) and a `paymaster_policy_id` column
+      on `policies`, replacing the old `spend_permission_*` columns at the policy level (D-009).
+      New `screens` table (RFB 5) plus `risk_tier`/`last_screened_at` on `recipients` (I13).
+- [x] 2. Migration `0003_lowly_sentry.sql` generated and applied clean against local Postgres.
+- [x] 3. `packages/policy/src/rules/`: catalogue and verdict precedence unchanged; R13's comment/
+      sentence reframed from "spend permission exceeded" to "the agent's remaining operating
+      allowance, sourced from Spend Permission today and the Paymaster cap once Phase 2 lands" —
+      its logic is untouched since the actual cap *source* is Phase 2 wallet work, not a policy
+      rule change (D-010).
+- [x] 4. Two new rule families: R-IDLE-SIZING turned out to already exist as R08 (runway buffer:
+      denies a `vault_deposit` that would bring liquid USDC below the mandate's buffer — exactly
+      "don't sweep the whole buffer," chain-agnostic, reused unchanged) — added no duplicate rule
+      (D-011). R-SCREEN-DEGRADED is genuinely new: **R22**, which clamps a recipient's effective
+      per-tx cap to a system tier ceiling when `state.recipientScreens` shows a `medium`/`high`
+      tier, `ESCALATE` (owner-liftable) rather than `DENY`.
+- [x] 5. `packages/shared/src/schemas/evaluation.ts`'s `state` gained `recipientScreens` (keyed by
+      policy recipient id); `apps/worker/src/pipeline.ts`'s `evaluationStateOf` now builds it for
+      real from `recipients.riskTier`/`lastScreenedAt` (already fetched by `gather.ts`), matched to
+      the policy recipient by address equality (I4) — this is real, working plumbing, not a stub.
+- [x] 6. Extended `packages/policy/test/rules.test.ts` with a full R22 branch suite (8 new tests);
+      every pre-existing verdict-precedence/fail-closed test still passes, with only the mechanical
+      rule-count literals (22→23) and the Base→Arc chain-id literals updated across the workspace's
+      test fixtures — no test's actual intent changed.
+
+**Exit gate, verified green this session:**
+
+```bash
+pnpm db:migrate                                              # clean
+pnpm test --filter @thesauros/policy --filter @thesauros/db  # all pass, 100% policy branch coverage
+pnpm check:arch                                               # clean
+pnpm typecheck / pnpm lint / pnpm test (full)                 # also all green
+```
 
 ### Phase 0 task checklist
 
@@ -155,6 +196,44 @@ before relying on them (the prior credentials were pinned to a different hackath
 may have lapsed) — that's a real blocker to raise with the human if true, not a reason to quietly
 substitute a different provider.
 
+### D-009 — Kept `spend_permissions` alongside the new `paymaster_policies` table, rather than replacing it
+
+`docs/DATA_MODEL.md` frames Paymaster as replacing spend-permission columns outright. But the
+`spend_permissions` table is actively read and written by tested, working Phase 0 code
+(`packages/wallet/src/revocation.ts`, `apps/worker/src/jobs/permissionScan.ts`, `gather.ts`), and
+Circle's Paymaster policy genuinely cannot back that table's `pending`/`approved_onchain`/`revoked`
+lifecycle — a Paymaster policy is configured server-side via the Circle API, not owner-signed
+on-chain the way a Base Spend Permission is. Ripping the table out now would break real, tested
+functionality for a replacement Phase 2 hasn't built yet. Added `paymaster_policies` and
+`policies.paymaster_policy_id` as new, additive columns instead; Phase 2 retires `spend_permissions`
+once the real Circle Paymaster flow is live and nothing reads it anymore.
+
+### D-010 — R13 kept its Spend-Permission-shaped logic; only its framing changed
+
+`docs/PHASES.md` Phase 1 says the "spend permission exceeded" rule should become "paymaster cap
+exceeded." R13 checks `proposal.amount <= state.allowanceRemaining` — a shape that is provider-
+agnostic on its face (it is just "does not exceed the remaining allowance," whatever backs the
+number). What actually changes in Phase 2 is *how `allowanceRemaining` gets its value*
+(`packages/wallet/src/spendPermission.ts`'s `readAllowanceRemaining`, today a Base-specific
+`NOT_IMPLEMENTED` stub per Phase 0's D-003) — not R13's comparison itself. Rewrote R13's comment and
+`sentences.ts` entry to describe it as the operating-allowance check it actually is, rather than
+inventing a second, parallel "paymaster cap" rule that would just duplicate R13's own logic once
+Phase 2 supplies a real number.
+
+### D-011 — R-IDLE-SIZING is R08; no new rule was added for it
+
+`docs/PHASES.md` Phase 1 asks for "an idle-cash-into-USYC sizing rule (don't sweep the whole
+buffer, respect the liquidity floor from the mandate)." `packages/policy/src/rules/R08.ts` already
+denies exactly this for `vault_deposit` (and escalates it for `pay_recipient`): the runway buffer
+must still be covered after the action, for any vault, not only a USYC-flavored one — the rule
+generalizes over "vault," and USYC is Circle's specific vault-shaped vehicle, not a new proposal
+kind or a new sizing dimension. Verified there is no gap by reading R08 rather than assuming the
+task description implied uncovered behavior. Adding a second rule with the same logic under a new
+name would only create two sources of truth for the same limit (and two things to keep in sync) —
+skipped per the "no unrequested abstractions" standard; if a future phase's USYC deposit flow needs
+sizing behavior R08 genuinely doesn't cover (e.g. a *target* allocation percentage rather than a
+floor), that is new scope to design then, not something to guess at now.
+
 ## Known issues
 
 - `packages/shared/src/env.ts` still validates the old Base/CDP/SERV environment variable names
@@ -167,7 +246,12 @@ substitute a different provider.
 - `apps/worker/test/fork/{loop,soak}.fork.test.ts` still fork **Base Sepolia** (anvil + a Coinbase
   Smart Wallet spend permission), per `docs/PHASES.md` Phase 2 task 5's own plan to rewrite them
   "against the real testnet" (Arc). They're opt-in (`THESAUROS_FORK=1`) and were left untouched;
-  Phase 2 owns rewriting them, not Phase 0.
+  Phase 2 owns rewriting them, not Phase 0. Phase 1's wallet-chain-id correction (5042002/5042 only)
+  means their `Policy` fixtures now need an `as unknown as Policy` cast (their `chainId: 84532` is
+  intentionally out-of-union — they really do target Base Sepolia today) and their raw
+  `chain_id: 84532` wallet inserts would now fail the `wallets_chain_id_check` constraint at runtime
+  if run. Left as-is rather than patched piecemeal: Phase 2's rewrite replaces these fixtures
+  wholesale anyway.
 - `docs/VERIFY.md` row 7 (Paymaster policy revoke propagation time) has no published SLA. Per its
   own fallback: I7's freeze must be enforced by the Policy Engine's own in-app frozen flag (checked
   synchronously before every proposal), not by assuming a Circle-side propagation time — and the
