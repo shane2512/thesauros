@@ -1,0 +1,20 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+solc = "0.8.30"
+optimizer = true
+optimizer_runs = 200
+# Deterministic bytecode: the deploy script (scripts/live/deploy-contracts.ts) reads out/*.json
+# and broadcasts the creation bytecode through the CDP SDK, so no private key ever touches disk.
+bytecode_hash = "none"
+cbor_metadata = false
+
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "forge-std/=lib/forge-std/src/",
+]
+
+[fmt]
+line_length = 110
