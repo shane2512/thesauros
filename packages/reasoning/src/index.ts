@@ -30,6 +30,7 @@ export {
   buildScreenPrompt,
   buildCompilerPrompt,
   buildExplainPrompt,
+  buildCounterpartyScreenPrompt,
   FACT_FIELDS,
   VAULT_FIELDS,
   RECIPIENT_FIELDS,
@@ -48,10 +49,12 @@ export {
   zServScreen,
   zServMandate,
   zServExplanation,
+  zServCounterpartyScreen,
   type ServProposal,
   type ServVerification,
   type ServScreen,
   type ServMandate,
+  type ServCounterpartyScreen,
 } from './schemas';
 
 export { screenText, screenItems, type HeuristicResult } from './heuristics';
@@ -73,3 +76,8 @@ export {
   type CompileInput,
   type CompileOutcome,
 } from './compile';
+export {
+  screenCounterparty,
+  type CounterpartyScreenInput,
+  type CounterpartyScreenOutcome,
+} from './screenCounterparty';

@@ -6,7 +6,14 @@ import { fileURLToPath } from 'node:url';
 import type { Context } from '@thesauros/context';
 import type { Proposal } from '@thesauros/shared';
 
-export const PROMPT_NAMES = ['propose', 'verify', 'screen', 'compile', 'explain'] as const;
+export const PROMPT_NAMES = [
+  'propose',
+  'verify',
+  'screen',
+  'compile',
+  'explain',
+  'counterparty',
+] as const;
 export type PromptName = (typeof PROMPT_NAMES)[number];
 
 export type Prompt = { name: PromptName; version: string; system: string };
@@ -141,6 +148,26 @@ export function buildExplainPrompt(input: {
       `decision: ${input.decision}`,
       `sentences: ${JSON.stringify(input.sentences)}`,
       `deterministic: ${input.deterministic}`,
+    ].join('\n\n'),
+  );
+}
+
+export function buildCounterpartyScreenPrompt(input: {
+  label: string;
+  address: string;
+  chainId: number;
+  previousTier?: 'low' | 'medium' | 'high';
+  /** Whatever deterministic facts were gathered about this counterparty — never freeform trust. */
+  signals: readonly string[];
+}): BuiltPrompt {
+  return build(
+    'counterparty',
+    [
+      `label: ${input.label}`,
+      `address: ${input.address}`,
+      `chainId: ${input.chainId}`,
+      `previousTier: ${input.previousTier ?? 'unknown'}`,
+      `signals: ${JSON.stringify(input.signals)}`,
     ].join('\n\n'),
   );
 }

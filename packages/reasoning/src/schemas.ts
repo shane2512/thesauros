@@ -62,6 +62,16 @@ export const zServScreen = z
   .strict();
 export type ServScreen = z.infer<typeof zServScreen>;
 
+// RFB 5 (I13) — continuous compliance screening. Never a payment authorization; feeds
+// `recipients.riskTier`, which `packages/policy`'s R22 reads to clamp an autonomous cap.
+export const zServCounterpartyScreen = z
+  .object({
+    tier: z.enum(['low', 'medium', 'high']),
+    reasons: z.array(z.string().max(300)).max(10),
+  })
+  .strict();
+export type ServCounterpartyScreen = z.infer<typeof zServCounterpartyScreen>;
+
 export const zServMandate = z
   .object({
     // Empty string = "the mandate does not say": `compileMandate` turns that into an issue and a
@@ -171,4 +181,5 @@ export const SERV_SCHEMAS = {
   screen: { name: 'screen', schema: jsonSchemaOf(zServScreen) },
   compile: { name: 'mandate', schema: jsonSchemaOf(zServMandate) },
   explain: { name: 'explanation', schema: jsonSchemaOf(zServExplanation) },
+  counterparty: { name: 'counterparty_screen', schema: jsonSchemaOf(zServCounterpartyScreen) },
 } as const;
