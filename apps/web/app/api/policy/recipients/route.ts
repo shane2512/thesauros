@@ -13,11 +13,17 @@ import { issuePending, consumePending, newNonce } from '@/lib/nonce';
 import { getSession } from '@/lib/session';
 import { db } from '@/lib/db';
 
+// bigint (the `money` column) can't go through JSON.stringify as-is (I12: base units stay bigint
+// everywhere until they cross an HTTP boundary, where they become decimal strings).
+function serializeRecipient(r: Awaited<ReturnType<typeof listRecipients>>[number]) {
+  return { ...r, maxPerTx: r.maxPerTx.toString() };
+}
+
 export async function GET(): Promise<NextResponse> {
   const auth = await requireWallet();
   if (!auth) return NextResponse.json({ error: 'sign in first' }, { status: 401 });
   const recipients = await listRecipients(db(), auth.wallet.id);
-  return NextResponse.json({ recipients });
+  return NextResponse.json({ recipients: recipients.map(serializeRecipient) });
 }
 
 const zBody = z.object({
@@ -99,5 +105,5 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
-  return NextResponse.json({ recipient: inserted });
+  return NextResponse.json({ recipient: serializeRecipient(inserted) });
 }

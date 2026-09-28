@@ -6,6 +6,9 @@ try {
 } catch {
   /* env may come from the shell */
 }
+// I11: the client-side "DEMO DATA" banner mirrors the server's own DEMO_MODE, not a separate flag —
+// Next only inlines NEXT_PUBLIC_* vars it can see at build time, so this re-exposes the server one.
+process.env.NEXT_PUBLIC_DEMO_MODE ??= process.env.DEMO_MODE;
 
 const config: NextConfig = {
   devIndicators: false,
