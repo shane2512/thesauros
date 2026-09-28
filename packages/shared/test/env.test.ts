@@ -33,7 +33,8 @@ describe('env', () => {
   it('I11: DEMO_MODE only on 84532', () => {
     expect(parseEnv({ ...base, DEMO_MODE: 'true' }).ok).toBe(true);
     expect(
-      parseEnv({ ...base, DEMO_MODE: 'true', CHAIN_ID: '8453', THESAUROS_ALLOW_MAINNET: 'true' }).ok,
+      parseEnv({ ...base, DEMO_MODE: 'true', CHAIN_ID: '8453', THESAUROS_ALLOW_MAINNET: 'true' })
+        .ok,
     ).toBe(false);
   });
 

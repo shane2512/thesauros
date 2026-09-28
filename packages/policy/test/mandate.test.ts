@@ -17,7 +17,9 @@ const binding = {
   chainId: 84532 as const,
   treasuryAddress: ADDR.treasury,
   usdcAddress: ADDR.usdc,
-  vaults: [{ id: 'v1', name: 'Thesauros Demo Vault', address: ADDR.vault, maxAllocationBps: 5_000 }],
+  vaults: [
+    { id: 'v1', name: 'Thesauros Demo Vault', address: ADDR.vault, maxAllocationBps: 5_000 },
+  ],
   recipients: [
     { id: 'alex', label: 'Alex', address: ADDR.alex, maxPerTxMicroUsd: usdc(2_000).toString() },
   ],

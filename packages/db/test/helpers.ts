@@ -5,7 +5,8 @@ import { createDb } from '../src/client';
 import { migrate } from '../src/migrate';
 
 const admin =
-  process.env['TEST_ADMIN_DATABASE_URL'] ?? 'postgres://thesauros:thesauros@localhost:5433/postgres';
+  process.env['TEST_ADMIN_DATABASE_URL'] ??
+  'postgres://thesauros:thesauros@localhost:5433/postgres';
 export const TEST_DB_NAME = 'thesauros_test';
 
 export function testDbUrl(): string {

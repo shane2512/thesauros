@@ -74,7 +74,8 @@ export function renderPolicyAsSentences(p: PolicyDraft): string[] {
       `"${v.name}" (${v.address}) may hold at most ${v.maxAllocationBps / 100}% of managed funds.`,
     );
   }
-  if (p.vaults.length === 0) s.push('No vaults are approved, so Thesauros cannot deposit anywhere.');
+  if (p.vaults.length === 0)
+    s.push('No vaults are approved, so Thesauros cannot deposit anywhere.');
   for (const r of p.recipients) {
     const schedule = r.schedule
       ? `, scheduled ${usd(r.schedule.amountMicroUsd)} on day ${r.schedule.dayOfMonth} of each month`
