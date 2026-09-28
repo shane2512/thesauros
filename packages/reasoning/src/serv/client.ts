@@ -1,9 +1,10 @@
-// The one place a real network call to the reasoning provider would be made. `LiveServClient`
-// deliberately refuses every call right now: the provider is not wired up yet (see docs/VERIFY.md
-// row 12 — Sonnet, per CLAUDE.md §4 — and docs/PHASES.md Phase 3, which rebuilds this against the
-// real API). Every task function above this file (propose/verify/screen/compile/explain) already
-// fails closed on a client error, so a worker built against `LiveServClient` today degrades to
-// deterministic-only behaviour instead of crashing (I5).
+// The one place a real network call to the reasoning provider is made. `LiveServClient` talks to
+// OpenServ's OpenAI-compatible `/chat/completions` endpoint (docs/VERIFY.md row 12 — verified live
+// in Phase 3: a real key against `inference-api.openserv.ai/v1` returns real models, including the
+// `gpt-5.4-mini` this package already defaulted to). Every task function above this file
+// (propose/verify/screen/compile/explain) already fails closed on a client error, so a worker whose
+// key is missing or whose call fails degrades to deterministic-only behaviour instead of crashing
+// (I5) — this file's only job is to turn one HTTP call into a `ServResponse` or a `ServError`.
 //
 // `FixtureServClient` is the offline double used by tests: it answers from a scripted map (unit
 // tests) or from previously recorded fixtures keyed by `requestHash` (golden replay), and never
@@ -11,7 +12,14 @@
 import { createHash } from 'node:crypto';
 import { err, ok, type Result, type Secret } from '@thesauros/shared';
 
-export const SERV_TASKS = ['propose', 'verify', 'screen', 'compile', 'explain'] as const;
+export const SERV_TASKS = [
+  'propose',
+  'verify',
+  'screen',
+  'compile',
+  'explain',
+  'counterparty',
+] as const;
 export type ServTask = (typeof SERV_TASKS)[number];
 
 export type ServUsage = { promptTokens: number; completionTokens: number; totalTokens: number };
@@ -56,20 +64,84 @@ export function requestHash(request: ServRequestBase): string {
 
 export type LiveServOptions = { apiKey: Secret<string>; baseURL?: string | undefined };
 
-/**
- * Not implemented yet (Phase 3). Constructing it is safe — the worker only builds one when an API
- * key is configured — but every `call` fails closed, which every task function above already
- * treats as "the model is unavailable this iteration."
- */
+const DEFAULT_BASE_URL = 'https://inference-api.openserv.ai/v1';
+
+/** Shape of an OpenAI-compatible `/chat/completions` response body — only the fields we read. */
+type ChatCompletion = {
+  id?: string;
+  model?: string;
+  choices?: { message?: { content?: string; refusal?: string | null } }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+};
+
 export class LiveServClient implements ServClient {
   constructor(private readonly options: LiveServOptions) {}
 
   async call(request: ServRequest): Promise<Result<ServResponse, ServError>> {
-    void this.options;
-    void request;
-    return err({
-      code: 'NOT_IMPLEMENTED',
-      message: 'LiveServClient is not implemented yet — see docs/PHASES.md Phase 3',
+    const baseURL = this.options.baseURL ?? DEFAULT_BASE_URL;
+    let res: Response;
+    try {
+      res = await fetch(`${baseURL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.options.apiKey.reveal()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: request.model,
+          messages: [
+            { role: 'system', content: request.system },
+            { role: 'user', content: request.user },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: { name: request.schemaName, strict: true, schema: request.jsonSchema },
+          },
+          max_completion_tokens: 2000,
+        }),
+      });
+    } catch (e) {
+      return err({
+        code: 'TRANSPORT',
+        message: `OpenServ request failed: ${e instanceof Error ? e.message : String(e)}`,
+      });
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return err({
+        code: res.status === 429 ? 'RATE_LIMIT' : 'TRANSPORT',
+        message: `OpenServ returned ${res.status}: ${body.slice(0, 500)}`,
+      });
+    }
+
+    let json: ChatCompletion;
+    try {
+      json = (await res.json()) as ChatCompletion;
+    } catch (e) {
+      return err({
+        code: 'TRANSPORT',
+        message: `OpenServ response was not JSON: ${e instanceof Error ? e.message : String(e)}`,
+      });
+    }
+
+    const content = json.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || content.length === 0)
+      return err({ code: 'TRANSPORT', message: 'OpenServ returned no message content' });
+
+    return ok({
+      text: content,
+      requestId: json.id ?? `openserv-${Date.now()}`,
+      model: json.model ?? request.model,
+      ...(json.usage
+        ? {
+            usage: {
+              promptTokens: json.usage.prompt_tokens ?? 0,
+              completionTokens: json.usage.completion_tokens ?? 0,
+              totalTokens: json.usage.total_tokens ?? 0,
+            },
+          }
+        : {}),
     });
   }
 }
