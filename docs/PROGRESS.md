@@ -2,10 +2,70 @@
 
 ## Status
 
-**Current phase:** Phase 3 — complete. `pnpm test --filter @thesauros/reasoning` and
-`pnpm test:adversarial` (10/10 cases held) pass; the full `pnpm typecheck`/`pnpm lint`/`pnpm test`/
-`pnpm check:arch` also stay green. Per the human's standing instruction, phases no longer pause for
-sign-off between them unless something needs a decision only they can make.
+**Current phase:** Phase 4 — complete. `pnpm typecheck`/`pnpm lint`/`pnpm test`/`pnpm check:arch`/
+`pnpm build` all pass; the golden path (sign in, add a recipient, freeze) was smoke-tested live
+against the dev Postgres, not just typechecked. Per the human's standing instruction, phases no
+longer pause for sign-off between them unless something needs a decision only they can make.
+
+### Phase 4 task checklist
+
+- [x] Verified `apps/worker/src/pipeline.ts`/`loop.ts`/`gather.ts` were already wired against the
+      real wallet + reasoning packages from Phases 1–3; no rework needed.
+- [x] Stripped `apps/web`'s leftover Coinbase/AgentKit/`@base-org`-specific `next.config.ts`
+      webpack workarounds and the `@coinbase/cdp-sdk` dependency (D-015).
+- [x] `packages/wallet/src/chains.ts`: Arc chain defs + `publicClientFor`, shared between
+      `apps/worker` and `apps/web` rather than duplicated.
+- [x] `packages/db/src/agent.ts`: `setAgentWallet`, the missing counterpart to
+      `senderFactory`'s reader — no route could persist a provisioned wallet before this.
+- [x] `packages/reasoning/src/prompts.ts`: prompt loading no longer uses
+      `new URL(x, import.meta.url)` (D-016) — webpack rewrites that pattern into an object that
+      fails Node's `fileURLToPath`, which only surfaces once a bundler (Next.js) touches the
+      package; plain `tsc`/`vitest` never caught it.
+- [x] All 12 routes from `docs/API.md`: `/api/auth/{nonce,verify}`, `/api/wallet/provision`,
+      `/api/mandate`, `/api/policy` (GET mints an activation nonce, POST activates and cancels
+      stale approvals), `/api/policy/recipients` (GET/two-step signed POST), `/api/treasury`,
+      `/api/audit`, `/api/approvals/[id]`, `/api/freeze` (+`DELETE` for unfreeze), `/api/revoke`,
+      `/api/sweep`.
+- [x] `apps/web/lib/sweep.ts`: sweep's own build→simulate→evaluate→signReceipt→execute run
+      inline in the request, never via the worker's job queue (I7 — sweep must survive the worker
+      being down).
+- [x] `apps/web/app/page.tsx`: one client-driven flow (connect → provision → mandate → policy
+      activation → dashboard) against an injected EIP-1193 wallet, covering all of
+      `docs/UX_FLOWS.md`'s screens as sections of one page rather than eight separate routes
+      (D-017).
+- [x] Live smoke test against the dev Postgres (not just typecheck): sign-in → session →
+      `/api/treasury` → `/api/audit`, then the two-step recipient-add signature flow, then freeze
+      — each left the DB row it should. Caught and fixed a real bug (below).
+
+### Bugs found by the live smoke test (not by typecheck/lint/tests)
+
+- `/api/policy/recipients` returned `recipients.maxPerTx` (a bigint `money` column) straight into
+  `NextResponse.json()`, which throws (`TypeError: Do not know how to serialize a BigInt`) —
+  Vitest never exercises real HTTP JSON serialization, only the DB layer's own bigint-safe types.
+  Fixed by serializing to a decimal string before the response (I12).
+- `.env.local` had `ARC_CHAIN_ID` where `packages/shared/src/env.ts`'s schema expects `CHAIN_ID`,
+  and had no `RECEIPT_HMAC_SECRET` at all — both silently meant `getEnv()` would have thrown the
+  first time any web route touched it. Neither the worker's own tests nor Phase 2/3's live checks
+  caught this because those either construct `Env` objects directly in tests or export
+  `RECEIPT_HMAC_SECRET`/`CHAIN_ID` as optional-with-defaults; `getEnv()` reading the real
+  `.env.local` was never actually exercised until this phase's web routes did it live.
+
+### Known issues (Phase 4 addition)
+
+- No Playwright e2e suite — `pnpm test:e2e` isn't wired up (PHASES.md anticipated this as a
+  possible time-boxed gap; the golden path was instead verified with a live scripted smoke test
+  against the real dev database, which exercises the same HTTP/DB boundary Playwright would).
+- No component tests for the new UI (`app/page.tsx`) — it was verified by the live smoke test
+  exercising its API routes directly, not by rendering the React tree.
+- `/api/revoke` and `/api/freeze` both flip the same `wallets.frozen` flag (D-012: Circle's Gas
+  Station policy has no per-treasury API to revoke on Arc) — they are audited under distinct
+  events (`FROZEN` with different `reason` text) but the owner sees the identical
+  `Thesauros freeze` message to sign for either button, since `@thesauros/shared`'s `FreezeAction`
+  type only defines `freeze`/`unfreeze`/`sweep`.
+- The mandate/policy-activation/sweep paths were verified by build + typecheck + the DB-only
+  parts of the smoke test, but not end-to-end with a live SERV call or a live Circle-wallet sweep
+  in this session (Phase 2/3 already proved the underlying `compileMandate`/`execute` calls work
+  live; Phase 4 only added the HTTP layer around them).
 
 ### Phase 3 task checklist
 
@@ -243,6 +303,42 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-015 — `apps/web` build config stripped of every Coinbase/AgentKit-specific workaround
+
+`next.config.ts` still carried a jose ESM race-condition fix, `@base-org/account`/
+`@coinbase/agentkit` webpack externals, `@noble/hashes` version-collision avoidance and a
+MetaMask-SDK React-Native fallback — all specific to the deleted prior prototype's dependency
+tree, none of which apply to a bare EIP-1193 `window.ethereum` connection plus the Circle Agent
+Stack. `@coinbase/cdp-sdk` was also still listed in `package.json` though nothing imported it.
+Both removed; `pnpm install` afterwards dropped 7 packages and added 6, confirming the tree was
+genuinely unused rather than transitively required.
+
+### D-016 — Prompt loading uses `dirname(fileURLToPath(import.meta.url))`, not `new URL(x, import.meta.url)`
+
+`packages/reasoning/src/prompts.ts` read `prompts/<name>.md` via
+`new URL('../prompts/', import.meta.url)` + string concatenation. That works under plain Node
+(`tsc`, Vitest, `apps/worker`) but breaks once a bundler touches the package: webpack (Next.js
+bundles `@thesauros/reasoning` for `apps/web`'s `/api/mandate`) treats the two-argument `new URL`
+form as an asset-module reference. A path built from a runtime variable can't be resolved that
+way at all ("Module not found"), and even a literal per-name URL gets rewritten into a
+webpack-internal URL wrapper that isn't a real `URL` instance, so `fileURLToPath` then throws
+(`instanceof URL` fails across that boundary). Switched to computing the directory once with
+`dirname(fileURLToPath(import.meta.url))` and joining with `path.join` — a form webpack does not
+special-case — which behaves identically under plain Node. This class of bug is invisible to
+`pnpm typecheck`/`pnpm test`/`pnpm check:arch`; only `pnpm build` (which runs `next build`)
+catches it, which is why it surfaced in Phase 4 rather than Phase 3.
+
+### D-017 — One `apps/web/app/page.tsx`, not eight routes, for `docs/UX_FLOWS.md`'s eight screens
+
+Connect, mandate composer, policy review, dashboard, approval modal, audit trail and compliance
+panel are implemented as sections of one client component driven by wallet-session state, rather
+than eight separate Next.js routes/pages. Every one of them is a thin read-or-sign-and-post view
+over the same small set of API routes with no independent navigation state worth preserving in
+the URL for a hackathon-scale demo; splitting them into separate routes would have meant either
+prop-drilling the same session/treasury fetch through eight files or re-fetching it eight times,
+for no UX benefit. Rejected alternative: a router-driven multi-page flow — deferred until a real
+need for deep-linkable screens (e.g. sharing a specific audit entry's URL) shows up.
+
 ### D-001 — Fresh project, discarded git history, reused domain-generic packages only
 
 The prior prototype targeted a different chain (Base Sepolia) and provider (Coinbase AgentKit) for
@@ -421,12 +517,11 @@ floor), that is new scope to design then, not something to guess at now.
   it's outside `docs/PHASES.md`'s task list; safe to delete whenever noticed.
 - Root `package.json` and `packages/wallet/package.json` still list `@coinbase/agentkit` /
   `@coinbase/cdp-sdk` as dependencies even though no source file imports them for real anymore
-  (only the Phase 0 architecture-boundary fixture does, deliberately). Left in place because
-  `apps/web` still references `@coinbase/cdp-sdk` in `next.config.ts` (Phase 4 scope, untouched
-  this session) — removing the dependency now would break that build. Phase 2/4 should drop it
-  from every `package.json` once the real Circle SDK packages replace it everywhere.
+  (only the Phase 0 architecture-boundary fixture does, deliberately). `apps/web`'s own
+  `@coinbase/cdp-sdk` reference was removed in Phase 4 (D-015); the root and `packages/wallet`
+  copies are still pending a cleanup pass.
 
 ## Next step
 
-Human sign-off to start Phase 1 (`docs/DATA_MODEL.md`, `docs/POLICY_ENGINE.md`,
-`packages/policy/` per `docs/PHASES.md`).
+Phase 5 (`docs/DEMO.md`): seed data, the demo script, and the final submission pass. Per the
+human's standing instruction this starts without waiting for sign-off.
