@@ -12,6 +12,7 @@ import { pino, type DestinationStream, type LoggerOptions } from 'pino';
 const SECRET_KEYS = [
   'apiKey',
   'apiKeySecret',
+  'entitySecret',
   'walletSecret',
   'sessionSecret',
   'secret',

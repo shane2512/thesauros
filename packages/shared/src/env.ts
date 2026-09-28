@@ -37,13 +37,14 @@ const schema = z.object({
     .enum(['5042002', '5042'])
     .default('5042002')
     .transform((v) => Number(v)),
-  RPC_URL_BASE_SEPOLIA: z.string().url().default('https://sepolia.base.org'),
+  // docs/VERIFY.md row 2 — Blockdaemon/dRPC/QuickNode are documented fallbacks, not wired in yet.
+  ARC_RPC_URL: z.string().url().default('https://rpc.testnet.arc.io'),
   SESSION_SECRET: secret(32),
   RECEIPT_HMAC_SECRET: secret(32).optional(), // required from Phase 3/5
-  CDP_API_KEY_ID: z.string().min(1).optional(),
-  CDP_API_KEY_SECRET: secret().optional(),
-  CDP_WALLET_SECRET: secret().optional(),
-  CDP_PAYMASTER_URL: z.string().url().optional(),
+  // API key + Entity Secret (docs/VERIFY.md row 5) — the only auth Circle's developer-controlled
+  // wallets SDK needs; there is no separate "Circle CLI" credential.
+  CIRCLE_API_KEY: secret().optional(),
+  CIRCLE_ENTITY_SECRET: secret().optional(),
   SERV_API_KEY: secret().optional(),
   SERV_BASE_URL: z.string().url().default('https://inference-api.openserv.ai/v1'),
   SERV_MODEL_PROPOSER: z.string().default('gpt-5.4-mini'),
@@ -56,6 +57,9 @@ const schema = z.object({
   // Phase 5: the I11 demo price source (docs/addresses.md). Optional: absent means no oracle, which
   // the Policy Engine treats as a DENY (R12) unless the fenced demo parity applies.
   MOCK_PRICE_FEED_ADDRESS: address.optional(),
+  // Phase 5: the Circle wallet id that signs the demo price refresh (not a treasury; a dedicated
+  // demo-admin wallet, so its sends never compete with a real treasury's own transactions).
+  DEMO_ADMIN_CIRCLE_WALLET_ID: z.string().optional(),
   DEMO_MODE: bool.default(false),
   THESAUROS_ALLOW_MAINNET: bool.default(false),
   TELEGRAM_BOT_TOKEN: secret().optional(),
