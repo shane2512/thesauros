@@ -2,11 +2,57 @@
 
 ## Status
 
-**Current phase:** Phase 2 — complete. Exit gate is green, including live verification: a real
-signed transaction landed on Arc testnet through the actual `packages/wallet` code (see Exit gate
-below for the tx hash). `pnpm test --filter @thesauros/wallet` and `pnpm check:arch` (confirms only
-`provision.ts` may construct a Circle Wallets client) pass; the full `pnpm typecheck`/`pnpm lint`/
-`pnpm test` also stay green. Awaiting human sign-off to start Phase 3.
+**Current phase:** Phase 3 — complete. `pnpm test --filter @thesauros/reasoning` and
+`pnpm test:adversarial` (10/10 cases held) pass; the full `pnpm typecheck`/`pnpm lint`/`pnpm test`/
+`pnpm check:arch` also stay green. Per the human's standing instruction, phases no longer pause for
+sign-off between them unless something needs a decision only they can make.
+
+### Phase 3 task checklist
+
+- [x] 1. LLM provider verified live (D-006's OpenServ decision, confirmed against the real API this
+      time — `docs/VERIFY.md` row 12). `LiveServClient` now makes a real `/chat/completions` call
+      with strict JSON-schema structured output instead of returning `NOT_IMPLEMENTED`. Verified
+      end-to-end through the actual library code: real `propose`/`verify`/`screenUntrusted` calls
+      against OpenServ produced correct, sensible results (a `noop` for healthy liquidity, `AGREE`
+      on a review of it, and a correctly-flagged real injection attempt).
+- [x] 2/3. `compile.ts`/`propose.ts` needed no changes beyond what Phase 0 already built — they were
+      already written against the current Policy/Proposal schema (USYC-as-a-vault, no Base-specific
+      assumptions baked in). Verified this by reading them again against D-012's Paymaster finding
+      rather than assuming; nothing in either file references a per-wallet Paymaster policy.
+- [x] 4. RFB 5 continuous screening: `screenCounterparty` (new reasoning task, schema-validated,
+      fails to `ok: false` rather than inventing a tier on any error) plus `apps/worker/src/jobs/
+      screening.ts`'s `screening.scan` scheduler — re-screens every recipient whose last screen is
+      stale (or who's never been screened), writes the append-only `screens` row and the
+      `recipients.riskTier` cache in one transaction, and audits a tier change. Deliberately never
+      reachable from `executor.ts`; deliberately honest about the signal it actually has today (an
+      allowlist tenure fact) rather than fabricating a fake sanctions-list/on-chain-history source.
+- [x] 5. Adversarial corpus rebuilt at `packages/reasoning/adversarial/run.ts` (`pnpm test:adversarial`).
+      10 cases exercising the real `screen -> propose -> verify -> evaluate` pipeline against
+      scripted "compromised" model output: address smuggling (rationale and id field), fabricated
+      fact ids, amount inflation, disallowed kinds, unicode/base64-obfuscated injected memos,
+      malformed JSON, and verifier disagreement. Every case resolves either to a reasoning-layer
+      `noop` (mapProposal's own deterministic checks) or a Policy Engine `DENY`/`ESCALATE` — never an
+      `ALLOW` of a proposal that should have been blocked.
+- [x] 6. Tests: 4 new `screenCounterparty` tests (`FixtureServClient`), 5 new `screening.scan` tests
+      (real Postgres), 10 adversarial cases. 100% policy branch coverage maintained.
+
+### D-014 — RFB 5's screening signal is honestly limited to allowlist tenure for now
+
+`docs/REASONING.md` frames counterparty screening as using "on-chain history and any available
+off-chain signal." No real on-chain-history analysis or sanctions-list integration exists in this
+repo. Rather than fabricate a fake data source to look more complete, `screening.scan` gathers the
+one deterministic fact that is actually available (how long the recipient has been on the owner's
+allowlist) and is explicit in its own code comment about the gap. A richer signal pipeline (a real
+sanctions-list API, on-chain activity heuristics) is real future work, not something to fake now.
+
+## Known issues (Phase 3 addition)
+
+- RFB 5's screening signal is limited (see D-014). The mechanism (schedule → LLM verdict → append-only
+  history → cached tier → Policy Engine clamp) is real and tested end-to-end; only the richness of
+  the *input signal* is a known gap.
+- `SCREEN_STALE_MS` (24h) and `SCREENING_SCAN_CRON` (`*/30 * * * *`) are reasonable hackathon-scale
+  defaults, not tuned against any real cadence requirement — revisit if RFB 5's judging criteria
+  turn out to expect a specific re-screen frequency.
 
 ### Phase 2 task checklist
 
