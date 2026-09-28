@@ -59,8 +59,8 @@ describe('priceOf', () => {
     const onMainnet = priceOf(
       parsedInput({
         demoStableParity: true,
-        chainId: 8453,
-        policy: { chainId: 8453 },
+        chainId: 5042,
+        policy: { chainId: 5042 },
         state: { prices: {} },
       }),
       ADDR.usdc,

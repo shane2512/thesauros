@@ -522,8 +522,8 @@ describe('R12 — price freshness and depeg', () => {
     const r = R.R12(
       parsedInput({
         demoStableParity: true,
-        chainId: 8453,
-        policy: { chainId: 8453 },
+        chainId: 5042,
+        policy: { chainId: 5042 },
         state: { prices: {} },
       }),
     );
@@ -809,24 +809,90 @@ describe('R21 — chain guard', () => {
     expect(R.R21(parsedInput()).result).toBe('PASS');
   });
   it('denies a policy for another chain', () => {
-    expect(R.R21(parsedInput({ chainId: 8453 }))).toMatchObject({ result: 'DENY' });
+    expect(R.R21(parsedInput({ chainId: 5042 }))).toMatchObject({ result: 'DENY' });
   });
   it('denies mainnet without the flag', () => {
-    const r = R.R21(parsedInput({ chainId: 8453, policy: { chainId: 8453 } }));
+    const r = R.R21(parsedInput({ chainId: 5042, policy: { chainId: 5042 } }));
     expect(r.message).toContain('allowMainnet');
   });
   it('allows mainnet with the flag', () => {
-    const r = R.R21(parsedInput({ chainId: 8453, policy: { chainId: 8453 }, allowMainnet: true }));
+    const r = R.R21(parsedInput({ chainId: 5042, policy: { chainId: 5042 }, allowMainnet: true }));
     expect(r.result).toBe('PASS');
   });
 });
 
+describe('R22 — continuous compliance screening', () => {
+  it('passes a non-payment kind', () => {
+    expect(R.R22(parsedInput({ proposal: depositProposal() })).result).toBe('PASS');
+  });
+  it('passes when the recipient has no screen on record', () => {
+    expect(R.R22(parsedInput({ proposal: payProposal() })).result).toBe('PASS');
+  });
+  it('passes an unresolved recipient (R05 already denies it)', () => {
+    const amount = usdc(100);
+    const r = R.R22(
+      parsedInput({ proposal: payProposal(amount, { params: { recipientId: 'ghost', amount } }) }),
+    );
+    expect(r.result).toBe('PASS');
+  });
+  it('passes a "low" tier screen', () => {
+    const r = R.R22(
+      parsedInput({
+        proposal: payProposal(),
+        state: { recipientScreens: { alex: { tier: 'low', screenedAt: NOW } } },
+      }),
+    );
+    expect(r.result).toBe('PASS');
+  });
+  it('passes a "medium" tier payment within the tier cap', () => {
+    const r = R.R22(
+      parsedInput({
+        proposal: payProposal(usdc(5_000)),
+        state: { recipientScreens: { alex: { tier: 'medium', screenedAt: NOW } } },
+      }),
+    );
+    expect(r.result).toBe('PASS');
+  });
+  it('escalates a "medium" tier payment over the tier cap', () => {
+    const r = R.R22(
+      parsedInput({
+        proposal: payProposal(usdc(20_000)),
+        state: { recipientScreens: { alex: { tier: 'medium', screenedAt: NOW } } },
+      }),
+    );
+    expect(r.result).toBe('ESCALATE');
+    expect(r.message).toContain('medium-risk tier cap');
+  });
+  it('escalates any "high" tier payment (cap is zero)', () => {
+    const r = R.R22(
+      parsedInput({
+        proposal: payProposal(usdc(1)),
+        state: { recipientScreens: { alex: { tier: 'high', screenedAt: NOW } } },
+      }),
+    );
+    expect(r.result).toBe('ESCALATE');
+    expect(r.message).toContain('high-risk tier cap');
+  });
+  it('escalates rather than denying when the amount cannot be valued', () => {
+    const r = R.R22(
+      parsedInput({
+        proposal: payProposal(),
+        state: {
+          recipientScreens: { alex: { tier: 'high', screenedAt: NOW } },
+          prices: {},
+        },
+      }),
+    );
+    expect(r.result).toBe('ESCALATE');
+  });
+});
+
 describe('the catalogue', () => {
-  it('holds all 22 rules in order and every rule returns its own code', () => {
-    expect(R.RULES).toHaveLength(22);
+  it('holds all 23 rules in order and every rule returns its own code', () => {
+    expect(R.RULES).toHaveLength(23);
     const input = zEvaluationInput.parse(parsedInput());
     const codes = R.RULES.map((rule) => rule(input).code);
-    expect(codes).toEqual(Array.from({ length: 22 }, (_, i) => `R${String(i).padStart(2, '0')}`));
+    expect(codes).toEqual(Array.from({ length: 23 }, (_, i) => `R${String(i).padStart(2, '0')}`));
   });
   it('simulationFor builds an approval only for deposits', () => {
     expect(simulationFor(depositProposal()).approvals).toHaveLength(1);

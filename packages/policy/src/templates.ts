@@ -100,7 +100,7 @@ export const MANDATE_TEMPLATES: Record<MandateTemplateName, MandateTemplate> = {
 
 /** Everything a template cannot know: who you are and which addresses you trust. */
 export type TemplateBinding = {
-  chainId: 84532 | 8453;
+  chainId: 5042002 | 5042; // Arc testnet | mainnet (docs/VERIFY.md rows 1, 13)
   treasuryAddress: Address;
   usdcAddress: Address;
   vaults: { id: string; name: string; address: Address; maxAllocationBps: number }[];

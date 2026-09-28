@@ -26,7 +26,7 @@ describe('evaluate — the happy path', () => {
   it('allows the default scenario and reports every rule', () => {
     const verdict = evaluate(input());
     expect(verdict.decision).toBe('ALLOW');
-    expect(verdict.results).toHaveLength(22);
+    expect(verdict.results).toHaveLength(23);
     expect(verdict.results.every((r) => r.result === 'PASS')).toBe(true);
   });
   it('carries the identifying fields of the decision', () => {
@@ -58,7 +58,7 @@ describe('evaluate — precedence DENY > ESCALATE > ALLOW', () => {
   });
   it('evaluates every rule even after a DENY (no short circuit)', () => {
     const verdict = evaluate(input({ state: { frozen: true, breakerOpen: true } }));
-    expect(verdict.results).toHaveLength(22);
+    expect(verdict.results).toHaveLength(23);
     expect(verdict.results.filter((r) => r.result === 'DENY')).toHaveLength(1);
   });
 });
@@ -288,7 +288,7 @@ describe('every hard rule changes the verdict when its condition is flipped', ()
     ['R15', { verifier: { verdict: 'DISAGREE', reasons: ['no'] } }],
     ['R16', { screen: { injectionSuspected: true, signals: ['ignore previous'] } }],
     ['R17', { ledger: { recentProposalHashes: [hashProposal(payProposal())] } }],
-    ['R21', { chainId: 8453 }],
+    ['R21', { chainId: 5042 }],
   ];
 
   it.each(cases)('%s flipped => DENY', (code, patch) => {

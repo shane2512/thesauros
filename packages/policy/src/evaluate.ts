@@ -30,6 +30,7 @@ export const APPROVAL_LIFTABLE: readonly RuleCode[] = [
   'R16',
   'R19',
   'R20',
+  'R22',
 ];
 
 /** Runs the catalogue. A rule that throws becomes a DENY rather than an exception (I5). */

@@ -14,7 +14,7 @@ import { evaluate } from '../src/evaluate';
 import { ADDR, input, payProposal, usdc, withdrawProposal } from './fixtures';
 
 const binding = {
-  chainId: 84532 as const,
+  chainId: 5042002 as const,
   treasuryAddress: ADDR.treasury,
   usdcAddress: ADDR.usdc,
   vaults: [
@@ -355,7 +355,7 @@ describe('renderPolicyAsSentences', () => {
   });
 
   it('has a sentence for every rule code', () => {
-    expect(Object.keys(ruleSentences)).toHaveLength(23);
+    expect(Object.keys(ruleSentences)).toHaveLength(24);
     expect(Object.values(ruleSentences).every((s) => s.length > 10)).toBe(true);
   });
 });
@@ -364,7 +364,7 @@ describe('explainVerdict', () => {
   it('explains an ALLOW', () => {
     const text = explainVerdict(evaluate(input()));
     expect(text).toContain('Approved by your mandate.');
-    expect(text).toContain('All 22 checks passed.');
+    expect(text).toContain('All 23 checks passed.');
     expect(text).toContain('Policy v3');
   });
 

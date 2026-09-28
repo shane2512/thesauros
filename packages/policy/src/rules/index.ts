@@ -22,6 +22,7 @@ import { R18 } from './R18';
 import { R19 } from './R19';
 import { R20 } from './R20';
 import { R21 } from './R21';
+import { R22 } from './R22';
 import type { Rule } from './kit';
 
 export const RULES: readonly Rule[] = [
@@ -47,6 +48,7 @@ export const RULES: readonly Rule[] = [
   R19,
   R20,
   R21,
+  R22,
 ] as const;
 
 export {
@@ -72,5 +74,6 @@ export {
   R19,
   R20,
   R21,
+  R22,
 };
 export type { Rule } from './kit';

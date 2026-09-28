@@ -35,7 +35,7 @@ export const ruleSentences: Record<RuleCode, string> = {
   R10: 'Amounts at or above your approval threshold need your signature.',
   R11: 'A simulation of the exact calls produced the balance changes the proposal promised.',
   R12: 'Prices are fresh and the stablecoin is within your depeg threshold.',
-  R13: 'The pull is within the allowance you signed on-chain.',
+  R13: 'The pull is within the agent wallet’s remaining operating allowance.',
   R14: 'Thesauros has not acted more times this hour than you allowed.',
   R15: 'A second, independent model reviewed the proposal and agreed.',
   R16: 'No prompt-injection signals were found in the data behind this decision.',
@@ -44,6 +44,7 @@ export const ruleSentences: Record<RuleCode, string> = {
   R19: 'Every fact the proposal cites really exists, and the model was confident enough.',
   R20: 'A risk exit only runs by itself when a real trigger fired and funds only move home.',
   R21: 'The policy and the executor are on the same chain, and mainnet needs an explicit flag.',
+  R22: 'A recent compliance screen clamps how much this recipient can be paid without your say-so.',
   ENGINE: 'Thesauros could not evaluate this proposal, so it refused it.',
 };
 

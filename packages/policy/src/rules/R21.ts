@@ -4,7 +4,7 @@
 // re-states the check here rather than trusting the caller.
 import { deny, pass, type Rule } from './kit';
 
-const MAINNET = 8453;
+const MAINNET = 5042; // Arc mainnet (docs/VERIFY.md row 13)
 
 export const R21: Rule = (input) => {
   if (input.policy.chainId !== input.chainId)

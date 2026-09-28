@@ -36,7 +36,7 @@ export function policy(over: Partial<Policy> = {}): Policy {
   return {
     version: 3,
     walletId: 'wallet-1',
-    chainId: 84532,
+    chainId: 5042002,
     treasuryAddress: ADDR.treasury,
     tokens: [{ symbol: 'USDC', address: ADDR.usdc, decimals: 6 }],
     vaults: [
@@ -215,7 +215,7 @@ export type InputPatch = {
   policy?: Partial<Policy>;
   proposal?: Proposal;
   now?: Date;
-  chainId?: 84532 | 8453;
+  chainId?: 5042002 | 5042;
   allowMainnet?: boolean;
   demoStableParity?: boolean;
   state?: Partial<EvaluationInput['state']>;
@@ -238,7 +238,7 @@ export function input(patch: InputPatch = {}): EvaluationInput {
     policy: p,
     proposal,
     now: patch.now ?? NOW,
-    chainId: patch.chainId ?? 84532,
+    chainId: patch.chainId ?? 5042002,
     allowMainnet: patch.allowMainnet ?? false,
     demoStableParity: patch.demoStableParity ?? false,
     state: {
@@ -254,6 +254,7 @@ export function input(patch: InputPatch = {}): EvaluationInput {
       contractHasCode: { [ADDR.vault]: true, [ADDR.vault2]: true },
       riskTriggers: [],
       ...patch.state,
+      recipientScreens: patch.state?.recipientScreens ?? {},
     },
     ledger: {
       outflowsLast24hMicroUsd: 0n,

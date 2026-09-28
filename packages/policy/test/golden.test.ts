@@ -33,7 +33,7 @@ describe('DEMO.md golden verdicts', () => {
     expect(t.suggestedAllowanceMicroUsd).toBe(usdc(50_000).toString());
 
     const draft = policyDraftFromTemplate('startup', {
-      chainId: 84532,
+      chainId: 5042002,
       treasuryAddress: ADDR.treasury,
       usdcAddress: ADDR.usdc,
       vaults: [

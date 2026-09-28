@@ -20,7 +20,7 @@ import {
 } from '@thesauros/shared';
 
 export const ONE_USD_MICRO = 1_000_000n;
-const DEMO_CHAIN_ID = 84532;
+const DEMO_CHAIN_ID = 5042002; // Arc testnet (docs/VERIFY.md row 1)
 
 /** MVP: the policy holds exactly one token, USDC. */
 export function usdcToken(policy: Policy): PolicyToken | undefined {
