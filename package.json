@@ -36,7 +36,6 @@
     "live:env": "tsx scripts/live/env-check.ts"
   },
   "devDependencies": {
-    "@coinbase/cdp-sdk": "^1.56.0",
     "@eslint/js": "^10.0.1",
     "@thesauros/context": "workspace:*",
     "@thesauros/db": "workspace:*",

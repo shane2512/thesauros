@@ -19,7 +19,7 @@ const expected = [
   'policy-only-shared',
   'reasoning-no-wallet-db',
   'owner-path-no-reasoning',
-  'cdp-only-in-wallet-bootstrap',
+  'circle-wallets-only-in-wallet-bootstrap',
 ];
 const missing = expected.filter((rule) => !r.stdout.includes(rule));
 if (r.status === 0 || missing.length > 0) {

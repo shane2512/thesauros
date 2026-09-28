@@ -81,12 +81,9 @@ module.exports = {
     // I1 — only the wallet bootstrap (and the manual, THESAUROS_LIVE-gated scripts) may hold a
     // send-capable wallet-provider client. Everything else, including `executor.ts`, receives the
     // send capability through the injected `TxSender` port, so nothing else in the repo can
-    // broadcast even by accident. `provision.ts` is Phase 0's NotImplementedYet stand-in for
-    // whatever Phase 2's Circle Wallets bootstrap becomes; the still-installed Coinbase SDK names
-    // stay in the `to` pattern only so this rule keeps meaning something until that package is
-    // dropped for good.
+    // broadcast even by accident. `provision.ts` is the real Circle Wallets bootstrap (Phase 2).
     {
-      name: 'cdp-only-in-wallet-bootstrap',
+      name: 'circle-wallets-only-in-wallet-bootstrap',
       comment:
         'a send-capable wallet-provider client may only be constructed in the named bootstrap modules (I1)',
       severity: 'error',
@@ -94,18 +91,18 @@ module.exports = {
         path: '^(packages|apps|scripts)/',
         pathNot: '^(packages/wallet/src/provision\\.ts$|apps/web/lib/wallet\\.ts$|scripts/live/)',
       },
-      to: { path: '@coinbase/(cdp-sdk|agentkit)' },
+      to: { path: '@circle-fin/(developer-controlled-wallets|user-controlled-wallets)' },
     },
     { name: 'no-circular', severity: 'error', from: {}, to: { circular: true } },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    // node_modules is excluded EXCEPT the two send-capable Coinbase packages: they have to stay
-    // visible for `cdp-only-in-wallet-bootstrap` to have anything to match on (they are still not
-    // followed, so nothing inside them is cruised).
+    // node_modules is excluded EXCEPT the send-capable Circle SDK packages: they have to stay
+    // visible for `circle-wallets-only-in-wallet-bootstrap` to have anything to match on (they are
+    // still not followed, so nothing inside them is cruised).
     exclude: {
-      // (`dist` is anchored to our own packages: @coinbase ships from a `dist/` folder too.)
-      path: '(^|/)(\.next|\.turbo)/|^(apps|packages|scripts)/.*/dist/|(^|/)node_modules/(?!.*@coinbase/(cdp-sdk|agentkit))',
+      // (`dist` is anchored to our own packages: these SDKs ship from a `dist`-shaped folder too.)
+      path: '(^|/)(\.next|\.turbo)/|^(apps|packages|scripts)/.*/dist/|(^|/)node_modules/(?!.*@circle-fin/(developer-controlled-wallets|user-controlled-wallets))',
     },
     tsConfig: { fileName: require('node:path').join(__dirname, 'tsconfig.base.json') },
     tsPreCompilationDeps: true,

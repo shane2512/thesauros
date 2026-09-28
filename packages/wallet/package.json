@@ -10,8 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@coinbase/agentkit": "^0.10.4",
-    "@coinbase/cdp-sdk": "^1.56.0",
+    "@circle-fin/developer-controlled-wallets": "^9.2.0",
     "@thesauros/db": "workspace:*",
     "@thesauros/policy": "workspace:*",
     "@thesauros/shared": "workspace:*",
