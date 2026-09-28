@@ -25,6 +25,7 @@ import { evaluate, hashProposal, signReceipt } from '@thesauros/policy';
 import { simulateProposalCalls } from '@thesauros/risk';
 import {
   APPROVAL_TTL_MS,
+  addressEquals,
   approvalMessage,
   type Address,
   type Delta,
@@ -385,6 +386,26 @@ type EvaluationInputLike = Omit<PipelineInput, 'g' | 'decisionId'> & {
 
 const bigint = (_k: string, v: unknown) => (typeof v === 'bigint' ? v.toString() : v);
 
+/**
+ * RFB 5 / I13 — the DB's `recipients.riskTier`/`lastScreenedAt` (set by Phase 3's screening
+ * scheduler), remapped from the DB row's own id to the POLICY recipient id R22 looks up by address
+ * equality (I4: never trust a stored id across two different id spaces without re-checking it).
+ * A row still at `low`/never-screened contributes nothing — R22 treats "no entry" as "no known
+ * degradation," not as a confirmed clean bill.
+ */
+function recipientScreensOf(
+  g: Gathered,
+): Record<string, { tier: 'medium' | 'high'; screenedAt: Date }> {
+  const out: Record<string, { tier: 'medium' | 'high'; screenedAt: Date }> = {};
+  for (const row of g.recipients) {
+    if (row.riskTier === 'low' || !row.lastScreenedAt) continue;
+    const policyRecipient = g.policy.recipients.find((p) => addressEquals(p.address, row.address));
+    if (policyRecipient)
+      out[policyRecipient.id] = { tier: row.riskTier, screenedAt: row.lastScreenedAt };
+  }
+  return out;
+}
+
 /** `EvaluationInput.state` — kept next to the pipeline so the approval path builds the same shape. */
 export function evaluationStateOf(g: Gathered) {
   return {
@@ -397,6 +418,7 @@ export function evaluationStateOf(g: Gathered) {
     prices: g.quote === undefined ? {} : { [g.usdc]: g.quote },
     contractHasCode: g.contractHasCode,
     riskTriggers: g.riskTriggers,
+    recipientScreens: recipientScreensOf(g),
   };
 }
 

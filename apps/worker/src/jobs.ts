@@ -9,7 +9,7 @@
 //   risk.scan         every minute; writes vault + price snapshots and triggers the loop on a hit
 //   permission.scan   every 5 minutes; detects an out-of-band spend-permission revoke (8.1)
 //   approvals.expire  every 5 minutes
-//   price.refresh     every minute, DEMO_MODE + chain 84532 ONLY (I11)
+//   price.refresh     every minute, DEMO_MODE + Arc testnet (chain 5042002) ONLY (I11)
 //
 // The per-wallet advisory lock lives here, around `runIteration`, so it has exactly one owner and a
 // job that cannot take it simply returns (PHASES 6 "Do not: run two loops concurrently").
@@ -344,7 +344,7 @@ export async function registerJobs(deps: JobDeps): Promise<void> {
   });
 
   // ── price.refresh — DEMO ONLY (I11) ────────────────────────────────────────────────────────────
-  if (env.DEMO_MODE && env.CHAIN_ID === 84532 && deps.demoPrice) {
+  if (env.DEMO_MODE && env.CHAIN_ID === 5042002 && deps.demoPrice) {
     const refresher = deps.demoPrice;
     await boss.createQueue(PRICE_REFRESH_QUEUE);
     await boss.work(PRICE_REFRESH_QUEUE, async () => {
