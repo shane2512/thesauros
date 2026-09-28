@@ -1,8 +1,11 @@
 # REASONING.md — AI reasoning layer
 
-Rebuilds `packages/reasoning/` against a to-be-verified LLM provider (see `docs/VERIFY.md`) for
-Thesauros's own task set. Replaces the prior prototype's SERV-specific client — nothing about that
-client's API shape is reusable, only the *pattern* below.
+Adapts `packages/reasoning/` — kept on **OpenServ (SERV)** as the reasoning provider, by explicit
+decision (`docs/PROGRESS.md` D-006), reversing this repo's earlier default of treating every
+prior-prototype provider name as forbidden. The settlement chain (Arc, via Circle) and the
+reasoning provider (OpenServ) are independent choices; only the task shapes below (mandate
+compilation, action proposal, compliance screening) are new for Thesauros — the SERV client
+integration pattern itself carries forward.
 
 ## The pattern (unchanged from prior prototype, this is the load-bearing invariant)
 
@@ -38,5 +41,8 @@ Deterministic context in → schema-validated structured output out. The reasoni
 
 ## Provider
 
-Not yet pinned — verify in Phase 0/3 and record in `docs/VERIFY.md`. Do not assume the prior
-project's provider (SERV) is available; it was specific to a different hackathon's platform.
+**OpenServ (SERV)**, kept from the prior prototype by explicit decision (D-006) — not a stand-in,
+not "until something better is found." Confirm current API base URL, auth, and model id are still
+live (they were pinned to a different hackathon's platform originally) and record the confirmation
+in `docs/VERIFY.md`. If OpenServ access has lapsed since the prior project, that's a real blocker
+to raise with the human, not a reason to silently swap providers.

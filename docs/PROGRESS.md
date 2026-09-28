@@ -129,6 +129,32 @@ Those directories don't exist yet (Phase 5 creates them per `docs/MIGRATION.md`)
 clauses from the `typecheck` script; Phase 5 should re-add them once those directories (and their
 own `tsconfig.json`s) exist.
 
+### D-008 — Reasoning provider kept as OpenServ (SERV); reverses `CLAUDE.md` §9's earlier blanket ban
+
+Human decision, made outside the phase-by-phase build: the reasoning layer (`packages/reasoning`)
+stays on OpenServ/SERV rather than moving to a new-to-be-chosen provider. Settlement chain (Arc,
+via the Circle Agent Stack) and reasoning provider (OpenServ) are independent choices — I1/I3 only
+require that whichever model is used never receives a write tool, which OpenServ never did in the
+prior prototype either. `CLAUDE.md` §9 has been updated with an explicit exception for this;
+`docs/REASONING.md` and `docs/VERIFY.md` row 12 updated to match.
+
+This **reopens D-004** (which deleted the SERV/OpenServ-branded golden-test fixtures under the
+old blanket-ban reading of §9) — those fixtures no longer need to be gone on principle, though
+D-004's other stated reason (they were unreplayable regardless, since Phase 0 rewrote every prompt
+and the recorded `requestHash` is keyed to the exact old prompt text) still holds, so there's
+nothing to actually restore; new golden fixtures should just be recorded fresh against the live
+OpenServ client once Phase 3 rebuilds the prompts.
+
+This also corrects a mix-up already present in `docs/VERIFY.md` row 12 before this decision: an
+earlier pass had recorded the reasoning-layer provider as "Anthropic Claude, Sonnet, medium
+effort," citing `CLAUDE.md` §4. That section is about which model *Claude Code itself* runs as
+while *building this repo* — an entirely different, unrelated axis from which LLM the shipped
+product calls inside `packages/reasoning` to propose treasury actions to a real user. Whoever
+picks this back up in Phase 3: verify OpenServ's API base URL, auth, and model id are still live
+before relying on them (the prior credentials were pinned to a different hackathon's platform and
+may have lapsed) — that's a real blocker to raise with the human if true, not a reason to quietly
+substitute a different provider.
+
 ## Known issues
 
 - `packages/shared/src/env.ts` still validates the old Base/CDP/SERV environment variable names

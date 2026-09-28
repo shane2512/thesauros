@@ -172,6 +172,12 @@ relying on them. If reality differs from what a doc assumes:
   was not verified in `VERIFY.md`.
 - Never mark a phase complete with failing or skipped tests.
 - Never expand scope beyond `PRD.md` without the human's approval.
-- Never reintroduce the prior prototype's branding, chain (Base), or provider names
-  (Coinbase AgentKit, SERV/OpenServ) into user-facing copy, docs, or package names — this is a
-  clean rebuild for a different chain and a different platform partner, not a reskin.
+- Never reintroduce the prior prototype's branding or chain (Base, Coinbase AgentKit, the
+  Steward name itself) into user-facing copy, docs, or package names — this is a clean rebuild
+  for a different chain and a different platform partner, not a reskin.
+- **Exception, by explicit decision (see `docs/PROGRESS.md` D-006):** the reasoning *provider*
+  is kept as OpenServ/SERV, reused deliberately rather than replaced. Settlement chain (Arc,
+  via the Circle Agent Stack) and reasoning provider (OpenServ) are independent choices — I1/I3
+  only require that whichever model is used never receives a write tool. "OpenServ" and "SERV"
+  may appear in code, docs, and — if it doesn't muddy the Tameion pitch — in demo copy that's
+  clear the reasoning brain and the settlement chain are two different partners' tech.
