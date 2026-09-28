@@ -1,0 +1,92 @@
+// Untrusted-text sanitizer (SECURITY §3 L5, PHASES 4.2). Everything a stranger can write into our
+// context — transfer memos, token names, vault names, recipient labels supplied by third parties —
+// goes through here before it is ever put in a prompt.
+
+/**
+ * Bidi controls, zero-width joiners/spaces, word joiners, BOM — and the Unicode TAG block
+ * (U+E0000–U+E007F), which can carry a whole invisible instruction inside innocent-looking text
+ * (found by review-gate case G05).
+ */
+// Built from escapes via `new RegExp` so the literal characters never appear in the source: they
+// are invisible, and a source file is the last place you want invisible characters.
+const INVISIBLE = new RegExp(
+  '[\\u00AD\\u200B-\\u200F\\u202A-\\u202E\\u2060-\\u2064\\u2066-\\u2069\\uFEFF]|[\\u{E0000}-\\u{E007F}]',
+  'gu',
+);
+/** C0/C1 control characters, including newlines and tabs (collapsed to a space). */
+// eslint-disable-next-line no-control-regex -- removing control characters is the point
+const CONTROL = new RegExp('[\\u0000-\\u001F\\u007F-\\u009F]', 'g');
+
+export const MAX_UNTRUSTED_CHARS = 500;
+
+export type SanitizeSignal =
+  | 'invisible_chars_removed'
+  | 'control_chars_removed'
+  | 'markup_escaped'
+  | 'address_redacted'
+  | 'opaque_token_redacted'
+  | 'normalized'
+  | 'truncated';
+
+/**
+ * A 20-byte address (or any long hex run that could hide one). Redacted rather than passed through:
+ * no prompt may carry an address (I4), and prompts are shared with the inference provider (NFR-5).
+ * The redaction is itself evidence — `address_redacted` becomes an injection signal.
+ */
+const HEX_BLOB = /(?:0x)?[0-9a-fA-F]{40,}/g;
+export const ADDRESS_PLACEHOLDER = '[redacted-address]';
+
+/** Keys, tokens and base64 payloads: long unbroken alphanumeric runs. */
+const OPAQUE = /[A-Za-z0-9_+/=-]{32,}/g;
+export const OPAQUE_PLACEHOLDER = '[redacted-token]';
+
+export type Sanitized = { text: string; signals: SanitizeSignal[] };
+
+/**
+ * NFKC-normalize, drop invisible/control characters, neutralise markup that could close our fence,
+ * collapse whitespace and truncate. The signals are reported so the injection screen can treat
+ * "this text was full of zero-width characters" as evidence in its own right.
+ */
+export function sanitizeText(raw: string, max: number = MAX_UNTRUSTED_CHARS): Sanitized {
+  const signals: SanitizeSignal[] = [];
+  const normalized = raw.normalize('NFKC');
+  if (normalized !== raw) signals.push('normalized');
+
+  let text = normalized.replace(INVISIBLE, '');
+  if (text !== normalized) signals.push('invisible_chars_removed');
+
+  const beforeControl = text;
+  text = text.replace(CONTROL, ' ');
+  if (text !== beforeControl) signals.push('control_chars_removed');
+
+  // The fence is `<untrusted_data id="...">…</untrusted_data>`; angle brackets and backticks inside
+  // the payload are the only way to forge a closing tag or a code fence, so they never survive.
+  const beforeMarkup = text;
+  text = text.replace(/[<>]/g, '·').replace(/`/g, "'");
+  if (text !== beforeMarkup) signals.push('markup_escaped');
+
+  const beforeHex = text;
+  text = text.replace(HEX_BLOB, ADDRESS_PLACEHOLDER);
+  if (text !== beforeHex) signals.push('address_redacted');
+
+  // A long unbroken alphanumeric run in free text is never meaningful prose: it is a key, a token,
+  // or a base64 payload. Prompts are shared with the inference provider (NFR-5), so it does not go.
+  const beforeOpaque = text;
+  text = text.replace(OPAQUE, (m) =>
+    m === ADDRESS_PLACEHOLDER || !/\d/.test(m) || !/[A-Za-z]/.test(m) ? m : OPAQUE_PLACEHOLDER,
+  );
+  if (text !== beforeOpaque) signals.push('opaque_token_redacted');
+
+  text = text.replace(/\s+/g, ' ').trim();
+
+  if (text.length > max) {
+    text = `${text.slice(0, max)}…`;
+    signals.push('truncated');
+  }
+  return { text, signals };
+}
+
+/** Same treatment for third-party display strings (token/vault names, external labels). */
+export function sanitizeLabel(raw: string, max = 80): string {
+  return sanitizeText(raw, max).text;
+}
