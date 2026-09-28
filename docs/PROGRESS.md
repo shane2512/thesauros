@@ -2,9 +2,121 @@
 
 ## Status
 
-**Current phase:** Phase 1 — complete. Exit gate is green (`pnpm db:migrate`,
-`pnpm test --filter @thesauros/policy --filter @thesauros/db`, `pnpm check:arch`; the full
-`pnpm typecheck`/`pnpm lint`/`pnpm test` also stay green). Awaiting human sign-off to start Phase 2.
+**Current phase:** Phase 2 — complete. Exit gate is green, including live verification: a real
+signed transaction landed on Arc testnet through the actual `packages/wallet` code (see Exit gate
+below for the tx hash). `pnpm test --filter @thesauros/wallet` and `pnpm check:arch` (confirms only
+`provision.ts` may construct a Circle Wallets client) pass; the full `pnpm typecheck`/`pnpm lint`/
+`pnpm test` also stay green. Awaiting human sign-off to start Phase 3.
+
+### Phase 2 task checklist
+
+- [x] 1. Custody model decided: **developer-controlled wallets**, not user-controlled (D-012).
+      User-controlled wallets need the end user to complete an MPC signing ceremony per transaction
+      (social login/PIN) — incompatible with an unattended worker loop. The "non-custodial-by-design"
+      story rests on Thesauros's own layers (Policy Engine, the `AllowReceipt` requirement, the
+      owner's freeze/revoke path), not on Circle's wallet type.
+- [x] 2. `packages/wallet/src/provision.ts`: real `createCircleClient`, `provisionTreasuryWallet`
+      (wallet set + wallet on `ARC-TESTNET`), `getTreasuryWalletAddress`, `circleTxSender` (the real
+      `TxSender`, backed by `createContractExecutionTransaction`). `actionRegistry.ts`'s `buildCalls`
+      is real for every kind except `pull_allowance` (see D-013). `executor.ts`'s `execute()` claims
+      the execution slot (I10), rebuilds and hash-checks the calls against the receipt (I5), and
+      sends via the real `TxSender`; `confirmExecution()` polls Circle's `getTransaction` AND
+      cross-checks the chain's own Transfer logs against `expectedDeltas` before calling anything
+      "confirmed" (5.5 — a Circle status is not, on its own, ground truth).
+- [x] 3. Paymaster policy: **could not be implemented as originally specified** — see D-012.
+      Confirmed live and via docs that Gas Station policies are console-only, account-wide, and not
+      settable per-treasury via any API. The Policy Engine's existing R06/R07 (already real, tested)
+      are the actual per-treasury enforcement; `execute()`'s `AllowReceipt` requirement is I1's real
+      backstop.
+- [x] 4. Owner-always-wins (I7): `tripBreaker` (real DB write), `recordRevocationIfRevoked` (real,
+      from Phase 1) and the wallet's `frozen` flag (checked in `runIteration` before any gather)
+      already work without touching the reasoning layer or Circle. `sweep_home`'s calls are real
+      (`buildCalls`'s `sweep_home` branch, unchanged since Phase 0/1).
+- [ ] 5. Adversarial/fork tests against real Arc testnet: **not done**. `apps/worker/test/fork/*`
+      still fork Base Sepolia (tracked known issue from Phase 0/1); rewriting them against a real
+      Arc fork is substantial standalone work, deferred pending a live Circle account (see Known
+      issues) and human direction on priority.
+- [x] 6. Tests: 21 new tests in `packages/wallet/test/{actionRegistry,executor}.test.ts` (pure
+      `buildCalls`/`callsHash` cases plus `execute`/`confirmExecution` against a real Postgres and a
+      fake Circle client). `docs/VERIFY.md` updated with what Phase 2 discovered (row 4: Circle's
+      `Blockchain` enum has no Arc mainnet value yet; row 5: entity-secret loss has no self-service
+      recovery; row 6: Gas Station policy is console-only).
+
+**Exit gate:**
+
+```bash
+pnpm test --filter @thesauros/wallet   # 21/21 pass
+pnpm check:arch                        # circle-wallets-only-in-wallet-bootstrap enforced
+```
+
+"A real signed transaction lands on Arc testnet and is visible on its explorer" — **demonstrated**.
+A fresh Circle Developer account was created after the first account's Entity Secret + recovery file
+both turned out to be lost (no self-service recovery exists for that — see D-012's sibling finding
+in `docs/VERIFY.md` row 5). Against the fresh account, `provisionTreasuryWallet` created a real
+wallet set and wallet on Arc testnet (`0x66d527549FeF4463EEe9e22C378ae0A2B76745E8`), the human funded
+it externally after Circle's own `requestTestnetTokens` faucet returned `Forbidden` for this account,
+and `circleTxSender.send()` — the actual `packages/wallet/src/provision.ts` code, not a mock —
+signed and broadcast a real ERC-20 `transfer` call. Confirmed on the public explorer:
+
+- Tx hash: `0x90abd40e5f68837c6108d6b72e92ad08bc57471866bcc7ef25a21bfe569aa534`
+- `https://explorer.testnet.arc.io/tx/0x90abd40e5f68837c6108d6b72e92ad08bc57471866bcc7ef25a21bfe569aa534`
+- Status: Success · "Confirmed within <= 0.52 secs" (matches `docs/VERIFY.md` row 1's finality
+  claim exactly) · fee `0.001715013975 USDC` (gas paid in USDC, per Arc's native-gas-is-USDC model,
+  `docs/VERIFY.md` row 3) · contract `NativeFiatTokenV2_2` (the USDC precompile)
+
+### D-012 — Custody model is developer-controlled; the Paymaster cap is NOT per-treasury and NOT API-settable
+
+Two related Phase 2 findings that change what `docs/SECURITY.md`'s "on-chain Paymaster cap set from
+the compiled policy" can mean in practice, confirmed against both Circle's docs and a live API call
+(`docs/VERIFY.md` row 6):
+
+1. **Custody model.** Circle's *user-controlled* wallets (the closest fit to "owner-controlled")
+   require the end user to complete an MPC signing ceremony (social login, email OTP, or PIN) for
+   every transaction. Thesauros's worker loop ticks on a schedule with nobody present to complete
+   that ceremony, so user-controlled wallets are not viable for an autonomous agent. Went with
+   **developer-controlled wallets**: Thesauros's own layers (Policy Engine caps, the `AllowReceipt`
+   requirement `execute()` enforces, the owner's freeze/revoke/sweep path) are what make this
+   "non-custodial-by-design," not the wallet type itself.
+2. **Paymaster cap.** Confirmed exhaustively (docs + a live account) that Circle's Gas Station
+   policy — the per-tx/daily USD cap mechanism — has no REST or SDK API to create or update it. It
+   is configured once, per network, through the Developer Console UI, and applies to the **whole
+   Circle account**, not to an individual treasury. There is no way to push a business's own
+   mandate-derived per-tx/daily limits to Circle programmatically. Rejected building a custom
+   on-chain limiter contract for Phase 2 (the alternative the human was offered) as more scope than
+   the hackathon window allows; the Policy Engine's own R06 (per-tx)/R07 (rolling daily) rules — real
+   and tested since before Phase 2 — are the actual per-treasury enforcement, with `execute()`'s
+   receipt requirement as I1's real backstop. `docs/SECURITY.md`'s layer-5 description should be
+   read as "the account-wide console policy is a coarse safety net," not "a per-wallet on-chain cap
+   derived from the compiled policy" — worth a doc pass in a later phase, not blocking Phase 2.
+
+### D-013 — `pull_allowance` stays `NOT_IMPLEMENTED`; it has no Circle equivalent
+
+Base's Spend Permission model needed `pull_allowance` because the agent's smart wallet was separate
+from the owner's EOA and had to pull funds into itself under a signed allowance. Circle
+developer-controlled wallets don't have that separation: the treasury wallet Circle provisions
+already holds the funds directly. `buildCalls` refuses to build this kind rather than inventing a
+new meaning for it — if a real use case for it turns up (e.g. moving funds between a Circle wallet
+and some other custody boundary), that is new design work, not a Phase 2 stub to reinterpret quietly.
+
+## Known issues (Phase 2 addition)
+
+- **Resolved this session:** the first Circle account's Entity Secret + recovery file were both
+  lost with no self-service recovery. A fresh Circle Developer account was created and its Entity
+  Secret registered cleanly (stored only in `.env.local`, never committed). Note for whoever holds
+  this account going forward: **the moment `registerEntitySecretCiphertext` succeeds, save the
+  Entity Secret and its downloaded recovery file to a password manager** — there is no second chance
+  if both are lost again.
+- **Resolved:** Circle's `requestTestnetTokens` faucet returned `Forbidden` for the new account
+  (likely an account-level enablement Circle gates separately — not a bug in this repo). The human
+  funded the wallet externally instead; `circleTxSender.send()` then landed a real transaction on
+  Arc testnet (see the Exit gate section above for the tx hash and explorer link).
+- Task 5 (adversarial/fork tests against real Arc testnet) is not started. The existing fork tests
+  target Base Sepolia and need a full rewrite against Arc's actual testnet infrastructure (anvil
+  equivalent, a real deployed vault, funded test accounts) — sized as its own chunk of work; Arc
+  testnet USDC is now available in the funded wallet above if that work picks up soon.
+- `packages/wallet/src/spendPermission.ts`'s `readAllowanceRemaining` and
+  `revocation.ts`'s on-chain `isRevoked` read remain `NOT_IMPLEMENTED`/Base-specific — Circle has no
+  equivalent primitive to replace them with (not a gap Phase 2 could close; see D-009/D-013).
 
 ### Phase 1 task checklist
 
