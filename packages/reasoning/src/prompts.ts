@@ -2,6 +2,7 @@
 // with a YAML-ish frontmatter header carrying its version, so a wording change is visible in the
 // audit trail's `promptVersion` field without needing a second source of truth.
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Context } from '@thesauros/context';
 import type { Proposal } from '@thesauros/shared';
@@ -19,7 +20,13 @@ export type PromptName = (typeof PROMPT_NAMES)[number];
 export type Prompt = { name: PromptName; version: string; system: string };
 export type BuiltPrompt = Prompt & { user: string };
 
-const PROMPTS_DIR = fileURLToPath(new URL('../prompts/', import.meta.url));
+// Deliberately `dirname(fileURLToPath(import.meta.url))` + `path.join`, not `new URL(x,
+// import.meta.url)`: webpack (Next.js bundles this package for apps/web) treats that two-argument
+// form as an asset-module reference and rewrites it into a webpack-internal URL wrapper that isn't
+// a real `URL` instance, which then fails `fileURLToPath`'s `instanceof URL` check at runtime. Bare
+// `import.meta.url` isn't special-cased, so this form works identically under plain Node (tsc,
+// apps/worker) and under a webpack bundle.
+const PROMPTS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'prompts');
 const cache = new Map<PromptName, Prompt>();
 
 /** Every task's field allowlist, for readers of the prompt output — not enforced here. */
@@ -55,7 +62,7 @@ function parseFrontmatter(raw: string): { version: string; body: string } {
 export function loadPrompt(name: PromptName): Prompt {
   const cached = cache.get(name);
   if (cached) return cached;
-  const raw = readFileSync(`${PROMPTS_DIR}${name}.md`, 'utf8');
+  const raw = readFileSync(join(PROMPTS_DIR, `${name}.md`), 'utf8');
   const { version, body } = parseFrontmatter(raw);
   const prompt: Prompt = { name, version, system: body };
   cache.set(name, prompt);
