@@ -1,8 +1,9 @@
-// packages/wallet — the only package allowed to touch chain-write actions (I1). Phase 0 status: the
-// reads (`reads.ts`), the crash-window reconciliation (`reconcile.ts`), the error taxonomy
-// (`errors.ts`), the pure call-hashing (`actionRegistry.ts`) and the breaker (`executor.ts`'s
-// `tripBreaker`) are real. Everything that would actually build a Circle/Arc call, send it, or talk
-// to a wallet provider is a clearly-marked NotImplementedYet stub — see docs/PHASES.md Phase 2.
+// packages/wallet — the only package allowed to touch chain-write actions (I1). Phase 2: real
+// Circle Wallets integration. `provision.ts` is the sole bootstrap for a send-capable client
+// (enforced by `.dependency-cruiser.cjs`); `executor.ts` is the sole caller of a write action, and
+// only with a valid `AllowReceipt`. `readAllowanceRemaining` (Base Spend Permission-specific) and
+// `recordRevocationIfRevoked`'s on-chain read stay `NOT_IMPLEMENTED` — Circle has no equivalent
+// mechanism to replace them with (docs/PROGRESS.md).
 export * from './abi';
 export * from './actionRegistry';
 export * from './errors';
