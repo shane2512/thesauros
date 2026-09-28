@@ -62,7 +62,7 @@ async function seedWallet(): Promise<string> {
     .insert(schema.wallets)
     .values({
       userId: user!.id,
-      chainId: 84532,
+      chainId: 5042002,
       treasuryAddress: ownerAddress,
       agentWalletAddress: nextAddress(),
       activePolicyVersion: 1,

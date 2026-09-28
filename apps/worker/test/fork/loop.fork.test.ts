@@ -120,7 +120,7 @@ const policyBody = (over: Partial<Policy> = {}): Policy =>
     signedBy: TREASURY,
     signature: '0xdeadbeef',
     ...over,
-  }) as Policy;
+  }) as unknown as Policy; // Base Sepolia fork fixture (Phase 2 rewrites this against Arc; chainId is intentionally out-of-union here)
 
 const usdcBalance = (who: Address) =>
   client.readContract({ address: USDC, abi: erc20Abi, functionName: 'balanceOf', args: [who] });

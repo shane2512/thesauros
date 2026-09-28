@@ -56,7 +56,7 @@ const policyBody = (over: Partial<Policy> = {}): Policy =>
   ({
     version: 1,
     walletId,
-    chainId: 84532,
+    chainId: 5042002,
     treasuryAddress: TREASURY,
     tokens: [{ symbol: 'USDC', address: USDC, decimals: 6 }],
     vaults: [
@@ -92,7 +92,7 @@ async function seed(policy: Policy = policyBody()): Promise<void> {
     .insert(schema.wallets)
     .values({
       userId,
-      chainId: 84532,
+      chainId: 5042002,
       treasuryAddress: TREASURY,
       agentWalletAddress: AGENT,
       activePolicyVersion: policy.version,

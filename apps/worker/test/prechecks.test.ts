@@ -20,7 +20,7 @@ const policy = (over: Partial<Policy> = {}): Policy =>
   ({
     version: 1,
     walletId: 'w1',
-    chainId: 84532,
+    chainId: 5042002,
     treasuryAddress: '0x00000000000000000000000000000000000f1a7f',
     tokens: [{ symbol: 'USDC', address: USDC, decimals: 6 }],
     vaults: [

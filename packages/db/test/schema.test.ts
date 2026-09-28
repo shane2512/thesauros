@@ -23,7 +23,7 @@ async function mkWallet(): Promise<string> {
     '0x' + Math.random().toString(16).slice(2).padEnd(40, '0'),
   ]);
   const [w] = await q(
-    `insert into wallets(user_id, chain_id, treasury_address) values ($1, 84532, $2) returning id`,
+    `insert into wallets(user_id, chain_id, treasury_address) values ($1, 5042002, $2) returning id`,
     [u.id, ADDR],
   );
   return w.id as string;
@@ -82,7 +82,7 @@ describe('migrations on a fresh database', () => {
 });
 
 describe('key constraints', () => {
-  it('rejects chain_id outside (84532, 8453)', async () => {
+  it('rejects chain_id outside (5042002, 5042)', async () => {
     const [u] = await q(`insert into users(owner_address) values ('0xchain') returning id`);
     await expect(
       q(`insert into wallets(user_id, chain_id, treasury_address) values ($1, 1, $2)`, [

@@ -32,7 +32,7 @@ async function seedWallet(): Promise<string> {
   const user = await upsertUserByAddress(db, owner, new Date());
   const [wallet] = await db
     .insert(schema.wallets)
-    .values({ userId: user.id, chainId: 84532, treasuryAddress: owner })
+    .values({ userId: user.id, chainId: 5042002, treasuryAddress: owner })
     .returning();
   return wallet!.id;
 }

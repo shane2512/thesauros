@@ -106,14 +106,14 @@ describe('detectRiskTriggers', () => {
 
 describe('mockPriceFeedAdapter (I11 fence)', () => {
   const publicClient = {} as PublicClient;
-  const args = { publicClient, feed: FEED, token: USDC, chainId: 84532, demoMode: true };
+  const args = { publicClient, feed: FEED, token: USDC, chainId: 5042002, demoMode: true };
 
   it('is refused without DEMO_MODE', () => {
     expect(mockPriceFeedAdapter({ ...args, demoMode: false }).ok).toBe(false);
   });
 
   it('is refused on any chain other than Base Sepolia', () => {
-    for (const chainId of [1, 8453, 84531, 0]) {
+    for (const chainId of [1, 5042, 5042001, 0]) {
       expect(mockPriceFeedAdapter({ ...args, chainId }).ok).toBe(false);
     }
   });

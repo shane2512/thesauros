@@ -125,7 +125,7 @@ const policyBody = (walletId: string): Policy =>
     createdAt: '2026-09-21T00:00:00.000Z',
     signedBy: TREASURY,
     signature: '0xdeadbeef',
-  }) as Policy;
+  }) as unknown as Policy; // Base Sepolia fork fixture (Phase 2 rewrites this against Arc; chainId is intentionally out-of-union here)
 
 /** The fork's `TxSender`. Same harness limitation as loop.fork.test.ts: no batching. */
 const senderFor = (agent: Address): TxSender => ({

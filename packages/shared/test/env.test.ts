@@ -12,7 +12,7 @@ describe('env', () => {
     const r = parseEnv(base);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.value.CHAIN_ID).toBe(84532);
+      expect(r.value.CHAIN_ID).toBe(5042002);
       expect(r.value.DEMO_MODE).toBe(false);
       expect(r.value.SESSION_SECRET.reveal()).toBe('x'.repeat(32));
     }
@@ -26,14 +26,14 @@ describe('env', () => {
   });
 
   it('I8: refuses mainnet without the flag; allows with it', () => {
-    expect(parseEnv({ ...base, CHAIN_ID: '8453' }).ok).toBe(false);
-    expect(parseEnv({ ...base, CHAIN_ID: '8453', THESAUROS_ALLOW_MAINNET: 'true' }).ok).toBe(true);
+    expect(parseEnv({ ...base, CHAIN_ID: '5042' }).ok).toBe(false);
+    expect(parseEnv({ ...base, CHAIN_ID: '5042', THESAUROS_ALLOW_MAINNET: 'true' }).ok).toBe(true);
   });
 
-  it('I11: DEMO_MODE only on 84532', () => {
+  it('I11: DEMO_MODE only on 5042002', () => {
     expect(parseEnv({ ...base, DEMO_MODE: 'true' }).ok).toBe(true);
     expect(
-      parseEnv({ ...base, DEMO_MODE: 'true', CHAIN_ID: '8453', THESAUROS_ALLOW_MAINNET: 'true' })
+      parseEnv({ ...base, DEMO_MODE: 'true', CHAIN_ID: '5042', THESAUROS_ALLOW_MAINNET: 'true' })
         .ok,
     ).toBe(false);
   });

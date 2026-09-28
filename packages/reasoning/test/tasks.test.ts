@@ -255,7 +255,7 @@ describe('explain', () => {
 });
 
 const binding = {
-  chainId: 84532 as const,
+  chainId: 5042002 as const,
   treasuryAddress: TREASURY,
   usdcAddress: USDC,
   vaults: [{ id: 'v1', name: 'Demo vault', address: VAULT, maxAllocationBps: 5_000 }],

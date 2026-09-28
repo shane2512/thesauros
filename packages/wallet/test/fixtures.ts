@@ -15,7 +15,7 @@ export const ATTACKER = getAddress('0x3333333333333333333333333333333333333333')
 export const policy: Policy = {
   version: 1,
   walletId: 'wallet-1',
-  chainId: 84532,
+  chainId: 5042002,
   treasuryAddress: TREASURY,
   tokens: [{ symbol: 'USDC', address: USDC, decimals: 6 }],
   vaults: [

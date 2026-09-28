@@ -22,7 +22,7 @@ async function mkWallet(): Promise<string> {
     '0x' + Math.random().toString(16).slice(2).padEnd(40, '0'),
   ]);
   const [w] = await q(
-    `insert into wallets(user_id, chain_id, treasury_address) values ($1, 84532, $2) returning id`,
+    `insert into wallets(user_id, chain_id, treasury_address) values ($1, 5042002, $2) returning id`,
     [u.id, ADDR],
   );
   return w.id as string;
