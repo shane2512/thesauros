@@ -71,6 +71,13 @@ export const notificationType = pgEnum('notification_type', [
 ]);
 export const notificationChannel = pgEnum('notification_channel', ['inapp', 'telegram']);
 export const mandateTemplate = pgEnum('mandate_template', ['startup', 'dao', 'creator', 'custom']);
+// Phase 1 (Circle Paymaster policy, replacing the Base-specific spend_permissions mechanism for
+// the executor's on-chain cap — docs/VERIFY.md row 6). `spend_permissions` stays alongside it until
+// Phase 2 actually retires the Base-specific flow it backs (docs/PROGRESS.md).
+export const paymasterSponsorMode = pgEnum('paymaster_sponsor_mode', ['sponsored', 'self_pay']);
+export const paymasterPolicyStatus = pgEnum('paymaster_policy_status', ['active', 'revoked']);
+// RFB 5 (I13): a counterparty's risk tier from the most recent continuous re-screen.
+export const riskTier = pgEnum('risk_tier', ['low', 'medium', 'high']);
 
 export const users = pgTable('users', {
   id: id(),
@@ -102,7 +109,8 @@ export const wallets = pgTable(
     activePolicyVersion: integer('active_policy_version'),
     createdAt: createdAt(),
   },
-  (t) => [check('wallets_chain_id_check', sql`${t.chainId} in (84532, 8453)`)],
+  // Arc testnet (5042002) / mainnet (5042) — docs/VERIFY.md rows 1, 13.
+  (t) => [check('wallets_chain_id_check', sql`${t.chainId} in (5042002, 5042)`)],
 );
 
 export const mandates = pgTable('mandates', {
@@ -119,6 +127,35 @@ export const mandates = pgTable('mandates', {
   createdAt: createdAt(),
 });
 
+// Phase 1 — the Circle Paymaster policy that becomes the executor's on-chain cap (I1), replacing
+// the Base Spend Permission's grant/revoke mechanism (docs/VERIFY.md row 6: Circle's caps are
+// multi-dimensional — per-tx AND rolling-daily, independently — which perTxCapMicroUsd/
+// dailyCapMicroUsd mirror directly). `circlePolicyId` is set once Phase 2 actually creates the
+// policy via the Circle API; the row can exist before that with it left empty during provisioning.
+export const paymasterPolicies = pgTable(
+  'paymaster_policies',
+  {
+    id: id(),
+    walletId: uuid('wallet_id')
+      .notNull()
+      .references(() => wallets.id),
+    circlePolicyId: text('circle_policy_id'),
+    perTxCapMicroUsd: money('per_tx_cap_micro_usd').notNull(),
+    dailyCapMicroUsd: money('daily_cap_micro_usd').notNull(),
+    maxOperationsPerDay: integer('max_operations_per_day'),
+    sponsorMode: paymasterSponsorMode('sponsor_mode').notNull().default('sponsored'),
+    status: paymasterPolicyStatus('status').notNull().default('active'),
+    createdAt: createdAt(),
+    revokedAt: ts('revoked_at'),
+  },
+  (t) => [
+    check(
+      'paymaster_policies_caps_check',
+      sql`${t.perTxCapMicroUsd} >= 0 and ${t.dailyCapMicroUsd} >= 0`,
+    ),
+  ],
+);
+
 export const policies = pgTable(
   'policies',
   {
@@ -127,6 +164,9 @@ export const policies = pgTable(
       .references(() => wallets.id),
     version: integer('version').notNull(),
     mandateId: uuid('mandate_id').references(() => mandates.id),
+    // Phase 1: replaces the old spend_permission_* columns (docs/DATA_MODEL.md) — null until
+    // Phase 2 provisions the Circle Paymaster policy for this wallet.
+    paymasterPolicyId: uuid('paymaster_policy_id').references(() => paymasterPolicies.id),
     body: jsonb('body').notNull(),
     bodyHash: text('body_hash').notNull(),
     signature: text('signature'),
@@ -152,16 +192,40 @@ export const recipients = pgTable(
       .references(() => wallets.id),
     label: text('label').notNull(),
     address: text('address').notNull(), // checksummed
+    // I4: an address alone is not a unique key on Arc (CCTP/Gateway make "same address, different
+    // chain" a real distinct state) — every stored address is paired with a chain id.
+    chainId: integer('chain_id').notNull().default(5042002),
     maxPerTx: money('max_per_tx').notNull(),
     schedule: jsonb('schedule'),
     addedSignature: text('added_signature'),
     status: recipientStatus('status').notNull().default('active'),
+    // RFB 5 / I13: the most recent continuous-screening result. `low`/null (never screened) both
+    // mean "no known reason to clamp"; packages/policy's R22 only clamps on `medium`/`high`.
+    riskTier: riskTier('risk_tier').notNull().default('low'),
+    lastScreenedAt: ts('last_screened_at'),
     createdAt: createdAt(),
   },
   (t) => [
     uniqueIndex('recipients_wallet_address_uq').on(t.walletId, t.address),
     check('recipients_max_per_tx_check', sql`${t.maxPerTx} >= 0`),
   ],
+);
+
+// RFB 5 (I13) — one append-only row per scheduled re-screen. `recipients.riskTier`/
+// `lastScreenedAt` cache the latest result for the policy engine; this table is the full history.
+export const screens = pgTable(
+  'screens',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    recipientId: uuid('recipient_id')
+      .notNull()
+      .references(() => recipients.id),
+    riskTier: riskTier('risk_tier').notNull(),
+    evidence: jsonb('evidence').notNull(),
+    screenedAt: ts('screened_at').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('screens_recipient_screened_idx').on(t.recipientId, t.screenedAt.desc())],
 );
 
 export const vaults = pgTable(
@@ -305,6 +369,10 @@ export const executions = pgTable(
       .references(() => agentDecisions.id),
     proposalHash: text('proposal_hash').notNull(),
     kind: text('kind').notNull(),
+    // Source chain the calls execute on (matches the wallet's chain). Nullable dest is set only for
+    // a CCTP payout, where source and destination genuinely differ (docs/DATA_MODEL.md).
+    chainId: integer('chain_id').notNull().default(5042002),
+    destChainId: integer('dest_chain_id'),
     callsHash: text('calls_hash').notNull(),
     userOpHash: text('user_op_hash'),
     txHash: text('tx_hash'),
