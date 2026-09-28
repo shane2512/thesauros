@@ -40,6 +40,12 @@ export const SYSTEM_CEILINGS = {
   MAX_SPEND_PERMISSION_HORIZON_SEC: 365 * 24 * 3_600,
   /** Clock-skew tolerance when checking that `start` is not in the past. */
   SPEND_PERMISSION_CLOCK_SKEW_SEC: 300,
+
+  // --- Continuous compliance screening (Phase 1; RFB 5, I13) --------------------------------------
+  /** A recipient screened 'medium' risk is clamped to this per-tx cap regardless of the signed policy. */
+  RECIPIENT_TIER_CAP_MEDIUM_MICRO_USD: 10_000n * USDC,
+  /** A recipient screened 'high' risk cannot be paid autonomously at all; the owner must approve. */
+  RECIPIENT_TIER_CAP_HIGH_MICRO_USD: 0n,
 } as const;
 
 export type SystemCeilings = typeof SYSTEM_CEILINGS;

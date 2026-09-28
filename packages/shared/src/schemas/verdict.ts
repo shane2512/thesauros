@@ -27,6 +27,7 @@ export const RULE_CODES = [
   'R19',
   'R20',
   'R21',
+  'R22',
   'ENGINE',
 ] as const;
 export const zRuleCode = z.enum(RULE_CODES);

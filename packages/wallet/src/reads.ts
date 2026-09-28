@@ -95,7 +95,7 @@ export async function getSharePrice(
   }
 }
 
-/** Demo oracle read (DEMO_MODE + chain 84532 only, I11). Price is micro-USD. */
+/** Demo oracle read (DEMO_MODE + Arc testnet chain id 5042002 only, I11). Price is micro-USD. */
 export async function getMockPrice(
   publicClient: PublicClient,
   feed: Address,

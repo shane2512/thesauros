@@ -28,4 +28,5 @@ export const zHex = z
 export const zHash = z
   .string()
   .regex(/^0x[0-9a-f]{64}$/, 'expected 32-byte lowercase hex') as z.ZodType<`0x${string}`>;
-export const zChainId = z.union([z.literal(84532), z.literal(8453)]);
+/** Arc testnet (5042002) and mainnet (5042) — confirmed in docs/VERIFY.md rows 1 and 13. */
+export const zChainId = z.union([z.literal(5042002), z.literal(5042)]);

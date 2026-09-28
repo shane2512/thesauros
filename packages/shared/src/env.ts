@@ -32,9 +32,10 @@ const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.string().url(),
+  // Arc testnet (5042002) / mainnet (5042) — docs/VERIFY.md rows 1 and 13.
   CHAIN_ID: z
-    .enum(['84532', '8453'])
-    .default('84532')
+    .enum(['5042002', '5042'])
+    .default('5042002')
     .transform((v) => Number(v)),
   RPC_URL_BASE_SEPOLIA: z.string().url().default('https://sepolia.base.org'),
   SESSION_SECRET: secret(32),
@@ -47,7 +48,9 @@ const schema = z.object({
   SERV_BASE_URL: z.string().url().default('https://inference-api.openserv.ai/v1'),
   SERV_MODEL_PROPOSER: z.string().default('gpt-5.4-mini'),
   SERV_MODEL_VERIFIER: z.string().default('gpt-5.4-mini'),
-  USDC_ADDRESS: address.default('0x036CbD53842c5426634e7929541eC2318f3dCF7e'),
+  // Arc's USDC precompile — same address on testnet and mainnet (docs/VERIFY.md row 3). Note the
+  // dual-decimals gotcha: Arc's native gas asset uses 18 decimals, but this ERC-20 interface is 6.
+  USDC_ADDRESS: address.default('0x3600000000000000000000000000000000000000'),
   SPEND_PERMISSION_MANAGER_ADDRESS: address.default('0xf85210B21cC50302F477BA56686d2019dC9b67Ad'),
   MOCK_VAULT_ADDRESS: address.optional(),
   // Phase 5: the I11 demo price source (docs/addresses.md). Optional: absent means no oracle, which
@@ -69,11 +72,11 @@ export function parseEnv(source: Record<string, string | undefined>): Result<Env
     return err(parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
   }
   const env = parsed.data;
-  if (env.CHAIN_ID === 8453 && !env.THESAUROS_ALLOW_MAINNET) {
-    return err('CHAIN_ID 8453 (mainnet) refused: THESAUROS_ALLOW_MAINNET is not set (I8)');
+  if (env.CHAIN_ID === 5042 && !env.THESAUROS_ALLOW_MAINNET) {
+    return err('CHAIN_ID 5042 (Arc mainnet) refused: THESAUROS_ALLOW_MAINNET is not set (I8)');
   }
-  if (env.DEMO_MODE && env.CHAIN_ID !== 84532) {
-    return err('DEMO_MODE=true is only allowed on chain 84532 (I11)');
+  if (env.DEMO_MODE && env.CHAIN_ID !== 5042002) {
+    return err('DEMO_MODE=true is only allowed on chain 5042002 (Arc testnet, I11)');
   }
   return ok(env);
 }

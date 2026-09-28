@@ -2,8 +2,9 @@
 //
 // V-13 recorded the honest state of the world: AgentKit's Pyth actions do not work on testnet
 // (400/401 without a keyed Hermes endpoint). So the only adapter that actually returns a number
-// today is the MockPriceFeed one, and it is fenced by I11: DEMO_MODE **and** chainId 84532, both
-// checked here rather than at the call site. Every quote carries `demo: true` so the UI can show
+// today is the MockPriceFeed one, and it is fenced by I11: DEMO_MODE **and** Arc testnet's chain id
+// (5042002), both checked here rather than at the call site. Every quote carries `demo: true` so
+// the UI can show
 // the "DEMO DATA" banner and the audit row records which source priced the action.
 //
 // `PriceAdapter` is the seam a real feed (Pyth with a keyed endpoint, Chainlink, an exchange TWAP)
@@ -42,7 +43,7 @@ const MOCK_PRICE_FEED_ABI = [
   },
 ] as const;
 
-export const BASE_SEPOLIA = 84532;
+export const ARC_TESTNET = 5042002; // docs/VERIFY.md row 1
 
 export type MockPriceFeedOptions = {
   publicClient: PublicClient;
@@ -62,8 +63,8 @@ export type MockPriceFeedOptions = {
 export function mockPriceFeedAdapter(options: MockPriceFeedOptions): Result<PriceAdapter> {
   const { publicClient, feed, token, chainId, demoMode } = options;
   if (!demoMode) return err('MockPriceFeed requires DEMO_MODE=true (I11)');
-  if (chainId !== BASE_SEPOLIA)
-    return err(`MockPriceFeed is only allowed on Base Sepolia (${BASE_SEPOLIA}), not ${chainId}`);
+  if (chainId !== ARC_TESTNET)
+    return err(`MockPriceFeed is only allowed on Arc testnet (${ARC_TESTNET}), not ${chainId}`);
 
   const feedAddress = getAddress(feed);
   const priced = getAddress(token);

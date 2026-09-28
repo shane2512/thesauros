@@ -22,6 +22,13 @@ export type RiskTrigger = z.infer<typeof zRiskTrigger>;
 export const zPriceQuote = z.object({ microUsd: zAmount, publishedAt: z.date() });
 export type PriceQuote = z.infer<typeof zPriceQuote>;
 
+/** RFB 5 / I13 — a recipient's latest continuous-screening result, keyed by policy recipient id. */
+export const zRecipientScreen = z.object({
+  tier: z.enum(['low', 'medium', 'high']),
+  screenedAt: z.date(),
+});
+export type RecipientScreen = z.infer<typeof zRecipientScreen>;
+
 /** An ERC-20 approval observed in the simulated calls (R18 / T5). */
 export const zSimulatedApproval = z.object({
   token: zAddress,
@@ -55,6 +62,11 @@ export const zEvaluationInput = z.object({
     prices: z.record(z.string(), zPriceQuote),
     contractHasCode: z.record(z.string(), z.boolean()),
     riskTriggers: z.array(zRiskTrigger),
+    /**
+     * I13 — keyed by policy recipient id. Empty unless Phase 3's screening scheduler has actually
+     * run for that recipient; no entry means "no degradation known," not "confirmed low risk."
+     */
+    recipientScreens: z.record(z.string(), zRecipientScreen).default({}),
   }),
   ledger: z.object({
     outflowsLast24hMicroUsd: zAmount,
