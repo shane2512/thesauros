@@ -41,6 +41,7 @@ import { createLogger, zPolicy, zProposal, type Address, type Env } from '@thesa
 import { reconcileExecution, type DemoPriceRefresher, type TxSender } from '@thesauros/wallet';
 import { EXEC_CONFIRM_QUEUE, registerConfirmJob } from './jobs/confirm';
 import { registerPermissionScanJob } from './jobs/permissionScan';
+import { registerScreeningJob } from './jobs/screening';
 import { registerWeeklyReportJob } from './jobs/weeklyReport';
 import { gather, isoDate } from './gather';
 import { withWalletLock } from './lock';
@@ -113,6 +114,14 @@ export async function registerJobs(deps: JobDeps): Promise<void> {
   });
   // 8.6 — weekly treasury report (yield / payments / blocked), once a week per wallet.
   await registerWeeklyReportJob({ boss, db, ...(deps.now ? { now: deps.now } : {}) });
+  // RFB 5 / I13 — continuous compliance re-screening, not a one-time onboarding gate.
+  await registerScreeningJob({
+    boss,
+    db,
+    model: env.SERV_MODEL_PROPOSER,
+    ...(deps.serv ? { client: deps.serv.client } : {}),
+    ...(deps.now ? { now: deps.now } : {}),
+  });
 
   const enqueueConfirm = async (job: ConfirmRequest): Promise<void> => {
     await boss.send(EXEC_CONFIRM_QUEUE, {
