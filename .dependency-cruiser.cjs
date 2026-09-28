@@ -79,16 +79,20 @@ module.exports = {
       'owner-path modules never touch reasoning (I7)',
     ),
     // I1 — only the wallet bootstrap (and the manual, THESAUROS_LIVE-gated scripts) may hold a
-    // send-capable CDP/AgentKit client. Everything else, including `executor.ts`, receives the
+    // send-capable wallet-provider client. Everything else, including `executor.ts`, receives the
     // send capability through the injected `TxSender` port, so nothing else in the repo can
-    // broadcast even by accident.
+    // broadcast even by accident. `provision.ts` is Phase 0's NotImplementedYet stand-in for
+    // whatever Phase 2's Circle Wallets bootstrap becomes; the still-installed Coinbase SDK names
+    // stay in the `to` pattern only so this rule keeps meaning something until that package is
+    // dropped for good.
     {
       name: 'cdp-only-in-wallet-bootstrap',
-      comment: 'AgentKit/CDP clients may only be constructed in the named bootstrap modules (I1)',
+      comment:
+        'a send-capable wallet-provider client may only be constructed in the named bootstrap modules (I1)',
       severity: 'error',
       from: {
         path: '^(packages|apps|scripts)/',
-        pathNot: '^(packages/wallet/src/agentkit\\.ts$|apps/web/lib/wallet\\.ts$|scripts/live/)',
+        pathNot: '^(packages/wallet/src/provision\\.ts$|apps/web/lib/wallet\\.ts$|scripts/live/)',
       },
       to: { path: '@coinbase/(cdp-sdk|agentkit)' },
     },

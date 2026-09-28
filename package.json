@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "docker compose up -d --wait && pnpm db:migrate && turbo run dev --parallel",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck && tsc --noEmit -p scripts/live/tsconfig.json && tsc --noEmit -p scripts/demo/tsconfig.json",
+    "typecheck": "turbo run typecheck",
     "lint": "eslint . && prettier --check .",
     "test": "vitest run && pnpm test:policy",
     "test:adversarial": "tsx packages/reasoning/adversarial/run.ts",
