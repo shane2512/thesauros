@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAddress } from 'viem';
 import { insertMandate, listRecipients, listVaultRows } from '@thesauros/db';
-import { getEnv } from '@thesauros/shared';
+import { canonicalJson, getEnv } from '@thesauros/shared';
 import { compileMandate, LiveServClient } from '@thesauros/reasoning';
 import type { TemplateBinding } from '@thesauros/policy';
 import { requireWallet } from '@/lib/requireWallet';
@@ -67,14 +67,16 @@ export async function POST(req: Request): Promise<NextResponse> {
     walletId: auth.wallet.id,
     text: parsed.data.text,
     template: parsed.data.template,
-    compiledDraft: outcome.draft ?? null,
+    // jsonb goes through the pg driver's own JSON.stringify, which throws on a raw bigint (every
+    // money field in a PolicyDraft) — canonicalJson turns those into decimal strings first.
+    compiledDraft: outcome.draft ? (JSON.parse(canonicalJson(outcome.draft)) as unknown) : null,
     assumptions: outcome.assumptions,
     questions: outcome.questions,
   });
 
   return NextResponse.json({
     mandateId: mandate.id,
-    draft: outcome.draft ?? null,
+    draft: mandate.compiledDraft,
     sentences: outcome.sentences,
     issues: outcome.issues,
     assumptions: outcome.assumptions,

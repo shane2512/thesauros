@@ -78,11 +78,22 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
 
   const now = new Date();
+  // zPolicyDraft makes version/walletId/createdAt/signedBy/signature optional precisely because a
+  // draft predates activation (packages/shared/src/schemas/policy.ts); the Policy Engine only ever
+  // evaluates a full, signed Policy, so this is where those five envelope fields get added.
+  const fullPolicy = {
+    ...(mandate.compiledDraft as Record<string, unknown>),
+    version,
+    walletId: auth.wallet.id,
+    createdAt: now.toISOString(),
+    signedBy: auth.ownerAddress,
+    signature: parsed.data.signature,
+  };
   await activatePolicyVersion(database, {
     walletId: auth.wallet.id,
     version,
     mandateId: mandate.id,
-    body: mandate.compiledDraft,
+    body: fullPolicy,
     bodyHash,
     signature: parsed.data.signature,
     now,

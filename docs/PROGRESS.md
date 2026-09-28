@@ -2,10 +2,58 @@
 
 ## Status
 
-**Current phase:** Phase 4 — complete. `pnpm typecheck`/`pnpm lint`/`pnpm test`/`pnpm check:arch`/
-`pnpm build` all pass; the golden path (sign in, add a recipient, freeze) was smoke-tested live
-against the dev Postgres, not just typechecked. Per the human's standing instruction, phases no
-longer pause for sign-off between them unless something needs a decision only they can make.
+**Current phase:** Phase 5 — in progress. The two code-only pieces of `docs/DEMO.md`'s seeding
+(`pnpm db:seed:demo`, `pnpm demo:attack`) are built and verified live against Arc testnet + a real
+Circle wallet. The rest of Phase 5 (public deployment, the ≤3-minute video, real counterparty
+traction, the submission form) needs the human directly — hosting credentials, a recording, and a
+form only they can submit — and is called out below rather than attempted blind.
+
+### Phase 5 progress
+
+- [x] `scripts/demo/seed.ts` (`pnpm db:seed:demo`): idempotent — reuses the demo owner/wallet/agent
+      wallet on rerun, provisions a real Circle agent wallet the first time, seeds two recipients
+      (one is beat 5's re-screen target) and activates a real signed policy. Run live against the
+      dev Postgres and a real Circle sandbox account.
+- [x] `scripts/demo/attack.ts` (`pnpm demo:attack <walletId> <recipientId>`): fires DEMO.md beat
+      4's two attacks — an over-cap payment (R06 DENY) and a payment to an unknown recipient (R05
+      DENY) — through the real `gather -> buildCalls -> simulate -> evaluate` pipeline
+      (`apps/worker/src/{gather,pipeline}.ts`), not a second hand-rolled copy of it. Both verified
+      live to DENY with the expected rule code.
+- [ ] `scripts/demo/{provision-owner,fund-owner,drawdown,reset}.ts` — referenced in
+      `package.json` but out of `docs/DEMO.md`'s explicit script list (only `db:seed:demo` and
+      `demo:attack` are named); not built this session. `provision-owner`/`fund-owner` duplicate
+      manual steps already done live in Phase 2 (a funded Circle wallet already exists); `reset`
+      would just be `DELETE FROM wallets WHERE …` and is cheap to add whenever it's actually needed.
+- [ ] Beats 2–3 and 6 of the demo script (mandate compile → policy sign → dashboard; live freeze)
+      are the same code path Phase 4 already smoke-tested (sign-in, recipient add, freeze all
+      round-tripped against real Postgres); beat 5 (a scheduled re-screen degrading a recipient's
+      tier) is Phase 3's `screening.scan`, already tested there. Nothing new to build for these;
+      running the actual demo is a human action (see below).
+- [ ] **Needs the human:** fund the demo agent wallet (`0x97e3256a8172bDF43F8FA986fFDc9c3643Fd6dE8`
+      — printed by `pnpm db:seed:demo` — same faucet workaround used in Phase 2, since the public
+      faucet returned Forbidden); pick and configure a public host (do not assume the prior
+      project's Render/Vercel setup transfers — PHASES.md says verify fresh); record the ≤3-minute
+      video; decide whether to pursue a real mainnet counterparty (I8's mainnet gate needs explicit
+      sign-off); write and submit the actual submission form before Oct 10, 11:59 PM ET.
+
+### Bugs found while building the demo scripts (not by typecheck/lint/tests)
+
+- `activatePolicyVersion`'s `body` was being stored as the raw `PolicyDraft` from
+  `policyDraftFromTemplate`/`compileMandate`, which is missing `version`/`walletId`/`createdAt`/
+  `signedBy`/`signature` — `zPolicyDraft` makes exactly those five fields optional because a draft
+  predates activation (`packages/shared/src/schemas/policy.ts`), but the Policy Engine only ever
+  evaluates a full, signed `Policy`. `apps/worker/src/gather.ts`'s `getActivePolicy` failed to
+  parse the stored body the first time anything tried to read it back (`demo:attack`'s `gather()`
+  call). Fixed in both `/api/policy`'s POST handler and `scripts/demo/seed.ts` by constructing the
+  full envelope before storing. This also means no wallet had ever actually reached a state where
+  `gather()` could read its policy back until this session — Phase 1–3's tests all construct a
+  `Policy` object directly rather than going through activation, so this path was untested.
+- The same `PolicyDraft`-has-bigints issue from Phase 4's recipient bug recurred for
+  `mandates.compiled_draft` and `policies.body`: both jsonb columns throw
+  `TypeError: Do not know how to serialize a BigInt` unless the value is round-tripped through
+  `canonicalJson` first. Fixed at both write sites (`/api/mandate`, `scripts/demo/seed.ts`); also
+  fixed `/api/mandate`'s response, which was returning the raw (bigint-carrying) compile output
+  instead of the already-serialized value read back from the `mandate` row.
 
 ### Phase 4 task checklist
 
@@ -523,5 +571,6 @@ floor), that is new scope to design then, not something to guess at now.
 
 ## Next step
 
-Phase 5 (`docs/DEMO.md`): seed data, the demo script, and the final submission pass. Per the
-human's standing instruction this starts without waiting for sign-off.
+Phase 5's code-only tasks (seed + attack scripts) are done. What's left is entirely human actions:
+fund the demo agent wallet, pick and configure a public host, record the demo video, and submit
+the form — see "Phase 5 progress" above for specifics.
