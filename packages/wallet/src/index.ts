@@ -5,6 +5,7 @@
 // `recordRevocationIfRevoked`'s on-chain read stay `NOT_IMPLEMENTED` — Circle has no equivalent
 // mechanism to replace them with (docs/PROGRESS.md).
 export * from './abi';
+export * from './chains';
 export * from './actionRegistry';
 export * from './errors';
 export * from './executor';

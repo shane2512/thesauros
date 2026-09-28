@@ -4,15 +4,18 @@
 // `@thesauros/wallet`, the only package `check:arch` lets construct one), a per-wallet send-capable
 // `TxSender`, the SERV client, the I11-fenced price adapter and the demo price refresher, plus the
 // SERV circuit breaker that 6.7's degraded mode reads.
-import { createPublicClient, defineChain, getAddress, http, type PublicClient } from 'viem';
+import { getAddress, type PublicClient } from 'viem';
 import { appendAudit, getWalletById, type Db } from '@thesauros/db';
 import { LiveServClient, type ServClient } from '@thesauros/reasoning';
 import { mockPriceFeedAdapter, type PriceAdapter } from '@thesauros/risk';
 import { createLogger, type Address, type Env } from '@thesauros/shared';
 import {
+  arcMainnet,
+  arcTestnet,
   circleTxSender,
   createCircleClient,
   demoPriceRefresher,
+  publicClientFor,
   type CircleClient,
   type DemoPriceRefresher,
   type TxSender,
@@ -20,26 +23,7 @@ import {
 
 const log = createLogger('runtime');
 
-// docs/VERIFY.md rows 1/2/13 — Arc has no built-in viem chain definition yet.
-export const arcTestnet = defineChain({
-  id: 5042002,
-  name: 'Arc Testnet',
-  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc.testnet.arc.io'] } },
-});
-export const arcMainnet = defineChain({
-  id: 5042,
-  name: 'Arc',
-  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc.mainnet.arc.io'] } },
-});
-
-export function publicClientFor(env: Env): PublicClient {
-  return createPublicClient({
-    chain: env.CHAIN_ID === 5042 ? arcMainnet : arcTestnet,
-    transport: http(env.ARC_RPC_URL),
-  }) as PublicClient;
-}
+export { arcMainnet, arcTestnet, publicClientFor };
 
 /** RECEIPT_HMAC_SECRET as bytes. Fails loudly at boot: a worker without it can never execute. */
 export function receiptKeyFor(env: Env): Uint8Array {
