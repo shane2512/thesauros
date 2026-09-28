@@ -1,0 +1,18 @@
+[
+  {
+    "requestHash": "0xc665a803f598787f0d636b974b30897cc9f06cac9bf24a0807e406a4b84612c2",
+    "task": "compile",
+    "model": "gpt-5.4-mini",
+    "response": {
+      "text": "{\"runwayBufferUsdc\":\"0\",\"perTxUsdc\":\"15000\",\"dailyUsdc\":\"\",\"approvalThresholdUsdc\":\"15000\",\"approvalThresholdVaultDepositUsdc\":\"\",\"maxActionsPerHour\":20,\"depegThresholdBps\":0,\"vaultDrawdownBps\":0,\"autonomousKinds\":[\"vault_deposit\",\"pay_recipient\",\"noop\"],\"vaults\":[{\"id\":\"v1\",\"maxAllocationBps\":10000}],\"recipients\":[{\"id\":\"r_alex\",\"maxPerTxUsdc\":\"\",\"scheduleDayOfMonth\":1,\"scheduleAmountUsdc\":\"\"},{\"id\":\"r_priya\",\"maxPerTxUsdc\":\"\",\"scheduleDayOfMonth\":1,\"scheduleAmountUsdc\":\"\"}],\"assumptions\":[\"Interpreted 'ask me before anything over 15k' as a per-transaction approval threshold of 15,000 USDC.\",\"Interpreted 'earn on the rest in approved vaults' as allowing full allocation of non-runway funds to the only supplied vault.\",\"Interpreted 'pay my team on the 1st' as a monthly schedule on day 1 for both supplied recipients.\",\"No runway duration in USDC was provided, so runwayBufferUsdc is left at 0 pending clarification.\"],\"questions\":[\"How much USDC should be kept as 4 months of runway liquidity?\",\"What is the monthly payment amount for r_alex?\",\"What is the monthly payment amount for r_priya?\",\"Should any vault deposit threshold be set below 15,000 USDC?\"]}",
+      "requestId": "chatcmpl-EQQeWQxsOVMVR6CK3fEfS1GKY4e26",
+      "model": "gpt-5.4-mini-2026-03-17",
+      "usage": {
+        "promptTokens": 1224,
+        "completionTokens": 324,
+        "totalTokens": 1548
+      }
+    },
+    "recordedAt": "2026-09-21T05:14:49.719Z"
+  }
+]

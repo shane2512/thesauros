@@ -1,0 +1,18 @@
+[
+  {
+    "requestHash": "0x70ec1e6b625f56120b4ee9c9de81a875c8b6e44b2b39eec4c9319acad735e4e8",
+    "task": "explain",
+    "model": "gpt-5.4-mini",
+    "response": {
+      "text": "{\"text\":\"Blocked by your mandate. The recipient is on your allowlist, matched by exact address. No prompt-injection signals were found in the data behind this decision. A second, independent model reviewed the proposal and agreed.\"}",
+      "requestId": "chatcmpl-EQQe8I2wY9VOR6Y06ew2zS3Ypw54b",
+      "model": "gpt-5.4-mini-2026-03-17",
+      "usage": {
+        "promptTokens": 710,
+        "completionTokens": 54,
+        "totalTokens": 764
+      }
+    },
+    "recordedAt": "2026-09-21T05:14:24.777Z"
+  }
+]

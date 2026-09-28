@@ -1,0 +1,19 @@
+{
+  "name": "@thesauros/reasoning",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@thesauros/context": "workspace:*",
+    "@thesauros/policy": "workspace:*",
+    "@thesauros/shared": "workspace:*",
+    "openai": "^7.19.0",
+    "zod": "^4.6.5"
+  }
+}
