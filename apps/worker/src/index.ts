@@ -61,7 +61,7 @@ await registerJobs({
   pool: lockPool,
   env,
   publicClient,
-  senderFor: senderFactory(env),
+  senderFor: senderFactory(db, env),
   receiptKey: receiptKeyFor(env),
   serv: servClientFor(env),
   priceAdapter: priceAdapterFor(env, publicClient),

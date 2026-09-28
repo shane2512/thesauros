@@ -85,8 +85,8 @@ export type JobDeps = {
   pool: Pool;
   env: Env;
   publicClient: PublicClient;
-  /** One sender per owner (each has their own CDP smart account). */
-  senderFor: (userId: string) => Promise<TxSender>;
+  /** One sender per treasury wallet (Circle developer-controlled wallet). */
+  senderFor: (walletId: string) => Promise<TxSender>;
   receiptKey: Uint8Array;
   serv?: DecisionLoopDeps['serv'];
   priceAdapter?: PriceAdapter | undefined;
@@ -125,14 +125,14 @@ export async function registerJobs(deps: JobDeps): Promise<void> {
     });
   };
 
-  /** Build the loop deps for one wallet (the sender is per-owner). */
+  /** Build the loop deps for one wallet (the sender is per-treasury). */
   const loopDepsFor = async (walletId: string): Promise<DecisionLoopDeps | null> => {
     const userId = await getUserIdForWallet(db, walletId);
     if (!userId) return null;
     return {
       db,
       publicClient: deps.publicClient,
-      sender: await deps.senderFor(userId),
+      sender: await deps.senderFor(walletId),
       receiptKey: deps.receiptKey,
       now,
       spendPermissionManagerAddress: manager,

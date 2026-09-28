@@ -1,31 +1,43 @@
 // Worker runtime wiring: turn the validated env into the ports the loop needs, once, at boot.
 //
-// Nothing here makes a decision. It builds: the RPC client, the send-capable `TxSender` (through
-// `@thesauros/wallet`, the only package `check:arch` lets construct a CDP client), the SERV client,
-// the I11-fenced price adapter and the demo price refresher, plus the SERV circuit breaker that
-// 6.7's degraded mode reads.
-import { createPublicClient, http, type PublicClient } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
-import { appendAudit, type Db } from '@thesauros/db';
+// Nothing here makes a decision. It builds: the RPC client, the Circle client (through
+// `@thesauros/wallet`, the only package `check:arch` lets construct one), a per-wallet send-capable
+// `TxSender`, the SERV client, the I11-fenced price adapter and the demo price refresher, plus the
+// SERV circuit breaker that 6.7's degraded mode reads.
+import { createPublicClient, defineChain, getAddress, http, type PublicClient } from 'viem';
+import { appendAudit, getWalletById, type Db } from '@thesauros/db';
 import { LiveServClient, type ServClient } from '@thesauros/reasoning';
 import { mockPriceFeedAdapter, type PriceAdapter } from '@thesauros/risk';
 import { createLogger, type Address, type Env } from '@thesauros/shared';
 import {
-  cdpAccountNames,
-  cdpTxSender,
-  createCdpClient,
+  circleTxSender,
+  createCircleClient,
   demoPriceRefresher,
+  type CircleClient,
   type DemoPriceRefresher,
   type TxSender,
 } from '@thesauros/wallet';
-import { getAddress } from 'viem';
 
 const log = createLogger('runtime');
 
+// docs/VERIFY.md rows 1/2/13 — Arc has no built-in viem chain definition yet.
+export const arcTestnet = defineChain({
+  id: 5042002,
+  name: 'Arc Testnet',
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+  rpcUrls: { default: { http: ['https://rpc.testnet.arc.io'] } },
+});
+export const arcMainnet = defineChain({
+  id: 5042,
+  name: 'Arc',
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+  rpcUrls: { default: { http: ['https://rpc.mainnet.arc.io'] } },
+});
+
 export function publicClientFor(env: Env): PublicClient {
   return createPublicClient({
-    chain: env.CHAIN_ID === 8453 ? base : baseSepolia,
-    transport: http(env.RPC_URL_BASE_SEPOLIA),
+    chain: env.CHAIN_ID === 5042 ? arcMainnet : arcTestnet,
+    transport: http(env.ARC_RPC_URL),
   }) as PublicClient;
 }
 
@@ -52,7 +64,7 @@ export function servClientFor(
   };
 }
 
-/** I11: only ever a mock feed, only on Base Sepolia, only in DEMO_MODE. */
+/** I11: only ever a mock feed, only on Arc testnet, only in DEMO_MODE. */
 export function priceAdapterFor(env: Env, publicClient: PublicClient): PriceAdapter | undefined {
   if (!env.MOCK_PRICE_FEED_ADDRESS) return undefined;
   const adapter = mockPriceFeedAdapter({
@@ -69,57 +81,51 @@ export function priceAdapterFor(env: Env, publicClient: PublicClient): PriceAdap
   return adapter.value;
 }
 
-/** CDP server account that owns the demo mocks (docs/addresses.md). */
-export const DEMO_ADMIN_ACCOUNT = 'thesauros-demo-admin';
+function circleClientFor(env: Env): CircleClient | undefined {
+  if (!env.CIRCLE_API_KEY || !env.CIRCLE_ENTITY_SECRET) return undefined;
+  return createCircleClient({ apiKey: env.CIRCLE_API_KEY, entitySecret: env.CIRCLE_ENTITY_SECRET });
+}
+
+export { circleClientFor };
 
 export function demoPriceRefresherFor(env: Env): DemoPriceRefresher | undefined {
-  if (!env.DEMO_MODE || !env.MOCK_PRICE_FEED_ADDRESS) return undefined;
-  if (!env.CDP_API_KEY_ID || !env.CDP_API_KEY_SECRET || !env.CDP_WALLET_SECRET) return undefined;
-  const cdp = createCdpClient({
-    apiKeyId: env.CDP_API_KEY_ID,
-    apiKeySecret: env.CDP_API_KEY_SECRET.reveal(),
-    walletSecret: env.CDP_WALLET_SECRET.reveal(),
-  });
-  const refresher = demoPriceRefresher({
-    cdp: cdp.evm as unknown as Parameters<typeof demoPriceRefresher>[0]['cdp'],
-    adminAccountName: DEMO_ADMIN_ACCOUNT,
-    feed: getAddress(env.MOCK_PRICE_FEED_ADDRESS),
-    chainId: env.CHAIN_ID,
-    demoMode: env.DEMO_MODE,
-  });
-  if (!refresher.ok) {
-    log.warn({ reason: refresher.error }, 'demo price refresh unavailable');
+  if (!env.DEMO_MODE || !env.MOCK_PRICE_FEED_ADDRESS || !env.DEMO_ADMIN_CIRCLE_WALLET_ID)
     return undefined;
-  }
-  return refresher.value;
+  const client = circleClientFor(env);
+  if (!client) return undefined;
+  return demoPriceRefresher(
+    client,
+    env.DEMO_ADMIN_CIRCLE_WALLET_ID,
+    getAddress(env.MOCK_PRICE_FEED_ADDRESS),
+  );
 }
 
 /**
- * The agent wallet's sender, one per user (each owner has their own CDP smart account, D-3).
- * Cached: building it costs two CDP round trips.
+ * The agent wallet's sender, one per treasury wallet. `wallets.agent_wallet_ref` holds the Circle
+ * `{ circleWalletId }` provisioning wrote (`provisionTreasuryWallet`); this only reads it back, it
+ * never provisions — a wallet with no ref yet has no sender, and the loop skips it (6.6-adjacent).
  */
-export function senderFactory(env: Env): (userId: string) => Promise<TxSender> {
-  if (!env.CDP_API_KEY_ID || !env.CDP_API_KEY_SECRET || !env.CDP_WALLET_SECRET)
-    throw new Error('CDP credentials are required to run the worker');
-  const cdp = createCdpClient({
-    apiKeyId: env.CDP_API_KEY_ID,
-    apiKeySecret: env.CDP_API_KEY_SECRET.reveal(),
-    walletSecret: env.CDP_WALLET_SECRET.reveal(),
-  });
+export function senderFactory(db: Db, env: Env): (walletId: string) => Promise<TxSender> {
+  const client = circleClientFor(env);
+  if (!client)
+    throw new Error('CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET are required to run the worker');
   const cache = new Map<string, TxSender>();
-  return async (userId: string) => {
-    const cached = cache.get(userId);
+  return async (walletId: string) => {
+    const cached = cache.get(walletId);
     if (cached) return cached;
-    const names = cdpAccountNames(userId);
-    if (!names.ok) throw new Error(names.error);
-    const sender = await cdpTxSender({
-      cdp: cdp.evm,
-      names: names.value,
-      network: env.CHAIN_ID === 8453 ? 'base' : 'base-sepolia',
-    });
-    if (!sender.ok) throw new Error(sender.error);
-    cache.set(userId, sender.value);
-    return sender.value;
+    const wallet = await getWalletById(db, walletId);
+    if (!wallet?.agentWalletAddress || !wallet.agentWalletRef)
+      throw new Error(`wallet ${walletId} has not been provisioned with a Circle wallet yet`);
+    const ref = wallet.agentWalletRef as { circleWalletId?: string };
+    if (!ref.circleWalletId)
+      throw new Error(`wallet ${walletId}'s agent_wallet_ref has no circleWalletId`);
+    const sender = circleTxSender(
+      client,
+      ref.circleWalletId,
+      getAddress(wallet.agentWalletAddress),
+    );
+    cache.set(walletId, sender);
+    return sender;
   };
 }
 

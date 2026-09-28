@@ -47,7 +47,7 @@ import {
   type Db,
 } from '@thesauros/db';
 import { FixtureServClient } from '@thesauros/reasoning';
-import { approvalMessage, APPROVAL_TTL_MS, type Policy } from '@thesauros/shared';
+import { approvalMessage, APPROVAL_TTL_MS, ok, type Policy } from '@thesauros/shared';
 import { ERC4626_ABI, confirmExecution, type Call, type TxSender } from '@thesauros/wallet';
 import { freshTestDb } from '../../../../packages/db/test/helpers';
 import { runIteration, type DecisionLoopDeps } from '../../src/loop';
@@ -140,7 +140,7 @@ const sender: TxSender = {
       last = hash;
     }
     if (!last) throw new Error('no calls to send');
-    return { txHash: last };
+    return ok({ providerTxId: last });
   },
 };
 
@@ -164,9 +164,10 @@ function loopDeps(over: Partial<DecisionLoopDeps> = {}): DecisionLoopDeps {
 async function drainConfirms(): Promise<void> {
   for (const job of confirmQueue.splice(0)) {
     const confirmed = await confirmExecution(
-      { db, publicClient, now: NOW, timeoutMs: 30_000, pollIntervalMs: 250 },
+      { db, client: {} as never, publicClient, now: NOW, timeoutMs: 30_000, pollIntervalMs: 250 },
       {
         executionId: job.executionId,
+        providerTxId: job.providerTxId,
         token: job.token,
         holders: job.holders,
         expectedDeltas: [...job.expectedDeltas],

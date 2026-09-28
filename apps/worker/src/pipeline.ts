@@ -59,6 +59,8 @@ export type PipelineDeps = {
 
 export type ConfirmRequest = {
   executionId: string;
+  /** Circle's transaction id (`executions.userOpHash`) — the confirmer's handle to poll. */
+  providerTxId: string;
   token: Address;
   holders: { agent: Address; treasury: Address; recipient?: Address };
   expectedDeltas: readonly Delta[];
@@ -300,6 +302,7 @@ export async function runPipeline(
       proposal.kind === 'pay_recipient' ? proposal.params.obligationId : undefined;
     await deps.enqueueConfirm({
       executionId: executed.value.execution.id,
+      providerTxId: executed.value.providerTxId,
       token: g.usdc,
       holders: { agent: g.agent, treasury: g.treasury, ...(recipient ? { recipient } : {}) },
       expectedDeltas: proposal.expectedDeltas,

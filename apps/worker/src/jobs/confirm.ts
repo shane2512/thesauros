@@ -4,12 +4,12 @@
 // The handler is a thin adapter: parse the payload at the boundary (zod), build the deps, call
 // `confirmExecution`. It never resends anything — that is the whole point of the confirmer.
 import { createPublicClient, getAddress, http, type PublicClient } from 'viem';
-import { baseSepolia } from 'viem/chains';
 import { z } from 'zod';
 import type { PgBoss } from 'pg-boss';
-import { confirmExecution } from '@thesauros/wallet';
+import { confirmExecution, createCircleClient, type CircleClient } from '@thesauros/wallet';
 import { createLogger, type Env } from '@thesauros/shared';
 import type { Db } from '@thesauros/db';
+import { arcTestnet } from '../runtime';
 
 export const EXEC_CONFIRM_QUEUE = 'exec.confirm';
 
@@ -17,6 +17,7 @@ const zAddress = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 
 export const zConfirmJob = z.object({
   executionId: z.string().uuid(),
+  providerTxId: z.string().min(1),
   token: zAddress,
   holders: z.object({
     agent: zAddress,
@@ -41,14 +42,23 @@ export function registerConfirmJob(deps: {
   db: Db;
   env: Env;
   publicClient?: PublicClient;
+  client?: CircleClient;
 }): Promise<void> {
   const log = createLogger('exec.confirm');
   const publicClient =
     deps.publicClient ??
     (createPublicClient({
-      chain: baseSepolia,
-      transport: http(deps.env.RPC_URL_BASE_SEPOLIA),
+      chain: arcTestnet,
+      transport: http(deps.env.ARC_RPC_URL),
     }) as PublicClient);
+  const client =
+    deps.client ??
+    (deps.env.CIRCLE_API_KEY && deps.env.CIRCLE_ENTITY_SECRET
+      ? createCircleClient({
+          apiKey: deps.env.CIRCLE_API_KEY,
+          entitySecret: deps.env.CIRCLE_ENTITY_SECRET,
+        })
+      : undefined);
 
   return (async () => {
     await deps.boss.createQueue(EXEC_CONFIRM_QUEUE);
@@ -60,11 +70,16 @@ export function registerConfirmJob(deps: {
           log.error({ jobId: job.id, issues: parsed.error.issues }, 'malformed exec.confirm job');
           throw new Error(`malformed exec.confirm job ${job.id}`);
         }
+        if (!client) {
+          log.error({ jobId: job.id }, 'no Circle client configured; cannot confirm');
+          throw new Error('CIRCLE_API_KEY/CIRCLE_ENTITY_SECRET are required to confirm executions');
+        }
         const d = parsed.data;
         const result = await confirmExecution(
-          { db: deps.db, publicClient, now: () => new Date() },
+          { db: deps.db, client, publicClient, now: () => new Date() },
           {
             executionId: d.executionId,
+            providerTxId: d.providerTxId,
             token: getAddress(d.token),
             holders: {
               agent: getAddress(d.holders.agent),

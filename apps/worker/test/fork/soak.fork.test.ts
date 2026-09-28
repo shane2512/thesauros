@@ -36,7 +36,7 @@ import { eq } from 'drizzle-orm';
 import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { schema, setWalletFrozen, verifyChain, type Db } from '@thesauros/db';
-import type { Policy } from '@thesauros/shared';
+import { ok, type Policy } from '@thesauros/shared';
 import { confirmExecution, type Call, type TxSender } from '@thesauros/wallet';
 import { freshTestDb } from '../../../../packages/db/test/helpers';
 import { runIteration, type DecisionLoopDeps } from '../../src/loop';
@@ -140,7 +140,7 @@ const senderFor = (agent: Address): TxSender => ({
       last = hash;
     }
     if (!last) throw new Error('no calls to send');
-    return { txHash: last };
+    return ok({ providerTxId: last });
   },
 });
 
@@ -161,9 +161,10 @@ const loopDeps = (w: SoakWallet, now: () => Date): DecisionLoopDeps =>
 async function drainConfirms(now: () => Date): Promise<void> {
   for (const job of confirmQueue.splice(0)) {
     await confirmExecution(
-      { db, publicClient, now, timeoutMs: 30_000, pollIntervalMs: 250 },
+      { db, client: {} as never, publicClient, now, timeoutMs: 30_000, pollIntervalMs: 250 },
       {
         executionId: job.executionId,
+        providerTxId: job.providerTxId,
         token: job.token,
         holders: job.holders,
         expectedDeltas: [...job.expectedDeltas],
