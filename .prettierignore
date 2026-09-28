@@ -1,0 +1,16 @@
+node_modules
+.next
+.turbo
+dist
+spikes
+docs
+steward-claude-code-specs
+pnpm-lock.yaml
+packages/db/drizzle
+apps/web/components/ui
+apps/web/generated
+CLAUDE.md
+next-env.d.ts
+contracts/lib
+contracts/out
+contracts/cache

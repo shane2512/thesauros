@@ -1,0 +1,29 @@
+packages:
+  - apps/*
+  - packages/*
+# Three different major viem versions were resolving side by side (2.23.2, 2.38.3, 2.56.8), each
+# with its own @noble/hashes pairing — webpack bundled two of them into the same chunk and crashed
+# at build time (TypeError in @noble/hashes' sha3.js, hit via viem's keccak256/getAddress while
+# collecting page data). Force one version everywhere.
+overrides:
+  viem: 2.56.8
+  # jose v6 dropped CommonJS support entirely (ESM-only). @coinbase/cdp-sdk's JWT auth code is CJS
+  # and require()s it; on Vercel's Node 24 build machines (not reproduced locally on Node 22) that
+  # races jose's own async ESM init (ERR_REQUIRE_ESM_RACE_CONDITION) during Next's build-time page-
+  # data collection, which does a raw require() regardless of serverExternalPackages. jose 5.x still
+  # ships a real dual CJS+ESM build with no such race; its JWT/JWK APIs are unchanged from v6.
+  jose: '5'
+allowBuilds:
+  esbuild: true
+  sharp: true
+  # Transitive deps of @coinbase/agentkit. All are optional native accelerations (or unrelated
+  # marketplace postinstalls) with pure-JS fallbacks, so we deliberately do NOT run their build
+  # scripts — less arbitrary code at install time, no functional loss. See PROGRESS D-19.
+  '@coinbase/x402': false
+  '@opensea/seaport-js': false
+  bigint-buffer: false
+  bufferutil: false
+  keccak: false
+  opensea-js: false
+  secp256k1: false
+  utf-8-validate: false

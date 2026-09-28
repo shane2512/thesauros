@@ -1,0 +1,30 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: thesauros, POSTGRES_PASSWORD: thesauros, POSTGRES_DB: thesauros }
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U thesauros" --health-interval 2s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4 # version from package.json packageManager
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm check:arch
+      - run: pnpm check:arch:fixture
+      - run: pnpm test
+      # 8.3: the prompt-injection corpus is an exit gate from Phase 4 on; CI ran everything but it.
+      - run: pnpm test:adversarial
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
