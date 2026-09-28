@@ -577,6 +577,25 @@ export async function deniedVerdictCountSince(
   return rows.length;
 }
 
+/**
+ * Persist the Circle wallet `provisionTreasuryWallet` created (Phase 2/4: `/api/wallet/provision`
+ * calls this once, right after provisioning; a wallet already provisioned is left untouched since
+ * Circle has no "find or create" and calling provision twice would orphan the first wallet).
+ */
+export async function setAgentWallet(
+  db: Db,
+  walletId: string,
+  args: { address: string; walletSetId: string; circleWalletId: string },
+): Promise<void> {
+  await db
+    .update(wallets)
+    .set({
+      agentWalletAddress: args.address,
+      agentWalletRef: { walletSetId: args.walletSetId, circleWalletId: args.circleWalletId },
+    })
+    .where(eq(wallets.id, walletId));
+}
+
 /** Set `wallets.frozen`, for the breaker and the owner path. */
 export async function setWalletFrozen(
   db: Db,
