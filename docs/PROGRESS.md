@@ -358,6 +358,74 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-019 — Cross-session audit checklist (Steward/Base owner-flow bugs): pass/fail against Thesauros
+
+A peer session working on the discarded prior prototype (Steward, Base/Coinbase AgentKit) sent an
+11-item self-audit checklist of bugs it hit in Steward's owner flow, asking whether Thesauros has
+the same bugs. Per D-001/CLAUDE.md §9, Steward's architecture is NOT Thesauros's — most of these
+items describe a Coinbase Smart Wallet / Spend Permission mechanism (companion wallets, CREATE2
+derivation, `SpendPermissionManager.revoke()`) that doesn't exist here at all (D-012: Circle's
+developer-controlled wallets have no per-wallet Paymaster policy to grant or revoke via API). Went
+through each item against the real code and, where possible, a live server rather than trusting the
+claim:
+
+1. **Connect-flow connector memory** — N/A. Thesauros has exactly one connection path (an injected
+   EIP-1193 wallet, D-017); there's no second connector to retry against the wrong one.
+2. **No filler nav on landing** — Pass. `app/page.tsx`'s signed-out view is a title, one line of
+   copy, and one Connect button; no About/Careers/Contact placeholders.
+3. **Domain derivation for sign-in** — Pass, already correct: `apps/web/lib/auth.ts`'s
+   `domainFromRequest` reads `req.headers.get('host')`, never `new URL(req.url).host` (this is
+   API.md's own carried-over lesson, followed in Phase 4).
+4. **Wallet-type-can-hold-a-cap check at provisioning** — N/A by architecture, not just "doesn't
+   apply, unchecked": Circle's Gas Station policy is console-configured and account-wide (D-012),
+   so there is no per-wallet capability to verify at provisioning time — every Circle
+   developer-controlled wallet `provisionTreasuryWallet` creates is identical in this respect.
+   Separately confirmed the treasury address (the connecting EOA) is set once at first sign-in
+   (`ensureWalletForUser`, `onConflictDoNothing`) and never re-derived on a later sign-in.
+5. **Mandate compilation fails closed, never invents a default** — Tested live against the real
+   `/api/mandate` route (real SERV call, not a fixture) with three mandates: one omitting every
+   required number, one naming a recipient that doesn't exist yet, one with no numbers at all. All
+   three correctly returned `draft: null` with specific `MISSING`-coded issues and clarifying
+   questions — zero invented defaults. Onboarding copy distinguishing "click a template" vs. "type
+   free text" doesn't apply yet since there's no template-button UI in the current mandate
+   composer (D-017's single-page flow only has the free-text path); worth adding if templates gain
+   a UI.
+6. **Signing-path isolation from the Paymaster-cap check (Steward's D-116 bug)** — N/A by
+   architecture: grepped every route under `apps/web/app/api` and `apps/web/lib` for any check
+   gating a signature on "can this wallet hold a cap," and found none — `/api/policy`,
+   `/api/policy/recipients`, `/api/approvals/[id]`, `/api/freeze`, `/api/revoke`, `/api/sweep` all
+   verify a plain EIP-191 signature via `verifyMessage` with no shared gate between them. This bug
+   class cannot exist here because there is no screen that grants a per-wallet Paymaster cap at
+   all (item 4).
+7. **`executor.ts` is the only Circle-write-capable module** — Pass, already enforced:
+   `pnpm check:arch`'s `circle-wallets-only-in-wallet-bootstrap` rule (verified in Phase 0/4 runs
+   to actually fire on the deliberate-violation fixture, not just exist unconfigured).
+8. **Approval modal signature isolation** — Pass, same evidence as item 6: `/api/approvals/[id]`
+   is a plain signature check with no Paymaster-related gate.
+9. **Freeze/revoke/sweep independent of the worker** — Tested live with the worker process
+   confirmed NOT running (checked `Get-NetTCPConnection`/process list before running the test):
+   sign-in, freeze, and unfreeze all round-tripped correctly against the real dev Postgres with
+   only the web process up. Revoke shares `ownerFreezeAction` with freeze, so the same evidence
+   covers it. Sweep's `evaluate -> signReceipt -> execute` path was not exercised live in this
+   check (needs a funded, provisioned agent wallet, which the current demo wallet isn't yet) but is
+   structurally identical — no worker/reasoning call anywhere in `apps/web/lib/sweep.ts`. The
+   "granting account differs from the connected wallet" scenario (Steward's D-117 bug) is N/A:
+   Circle's model has no per-wallet grant to revoke, so there is no granting-account/connected-
+   wallet mismatch to guard against.
+10. **Audit trigger actually tested, not just present** — Pass, already true:
+    `packages/db/test/audit.test.ts`'s `'rejects UPDATE, DELETE and TRUNCATE'` test issues real
+    `UPDATE`/`DELETE`/`TRUNCATE` statements against `audit_log` and asserts each is rejected with
+    the trigger's specific error message.
+11. **General lesson (test live, not just typecheck/lint)** — Already this session's own practice:
+    Phase 4/5's live smoke tests already caught two real bugs (BigInt JSON serialization, a
+    missing policy envelope) that no static check found. This audit added two more live checks
+    (mandate fail-closed behavior, freeze/unfreeze with the worker down) that hadn't been run yet.
+
+Net: 7 of 11 items pass or are structurally inapplicable with evidence; 0 required a code change.
+The one gap worth tracking is sweep's live execute() path, which needs a funded wallet to verify
+end-to-end — left as a "needs the human" item alongside the rest of Phase 5's funding/deployment
+tasks rather than blocking on it.
+
 ### D-018 — Fixed `.env.example` to match `packages/shared/src/env.ts`'s real schema
 
 D-006 (Phase 0) flagged that `.env.example` used stale Base/CDP-era variable names
