@@ -4,7 +4,7 @@
 // connector instead of wagmi's multi-connector picker (D-017: one connect path needs no chooser).
 import Link from 'next/link';
 import { IconClose, IconLock, IconShield, VerdictGlyph } from '@/components/icons';
-import { Button, Chip, Row } from '@/components/primitives';
+import { Button, Chip, Row, Wordmark } from '@/components/primitives';
 
 export type ConnectStep =
   'idle' | 'connecting' | 'signing' | 'verifying' | 'signed_in' | 'rejected' | 'error';
@@ -28,30 +28,35 @@ export function ConnectView({ step, onConnect }: { step: ConnectStep; onConnect:
   const retryable = step === 'rejected' || step === 'error';
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[440px] flex-col">
-      <header className="flex h-14 items-center px-2">
+    <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col">
+      <header className="flex h-16 items-center justify-between px-4">
+        <Wordmark />
         <Link
           href="/"
           aria-label="Close"
-          className="flex size-11 items-center justify-center text-ink"
+          className="-mr-2 flex size-11 items-center justify-center rounded-full text-ink hover:bg-surface-3"
         >
           <IconClose className="size-6" />
         </Link>
       </header>
 
       <main id="main" tabIndex={-1} className="flex-1 px-4 pt-4 outline-none">
-        <svg viewBox="0 0 64 64" className="mx-auto size-16" aria-hidden="true" focusable="false">
-          <path d="M10 16h44v32H10z" fill="var(--th-surface-3)" />
-          <path d="M10 16l22 16 22-16" fill="none" stroke="var(--th-surface-2)" strokeWidth="4" />
-          <path d="M40 40h14v8H40z" fill="var(--th-accent)" />
-        </svg>
-        <h1 className="pt-5 text-center text-h2 font-bold text-ink">Connect your wallet</h1>
-        <p className="mx-auto max-w-[46ch] pt-2 text-center text-small text-muted">
+        <img
+          src="/logo/thesauros-logo.svg"
+          alt=""
+          width={64}
+          height={64}
+          className="mx-auto size-16"
+        />
+        <h1 className="pt-5 text-center font-display text-headline leading-8 font-bold tracking-[-0.02em] text-ink">
+          Connect your wallet
+        </h1>
+        <p className="mx-auto max-w-[46ch] pt-2 text-center text-ui leading-5 text-muted">
           Thesauros never holds your keys. Every owner action is a signature you approve, and you
           can freeze, revoke or sweep the treasury home at any time.
         </p>
 
-        <div className="pt-6">
+        <div className="card mt-6 divide-y divide-line overflow-hidden">
           <Row icon={IconShield} title="Arc testnet only" right={<Chip>Testnet</Chip>} />
           <Row icon={IconLock} title="Read-only until you sign" sub="Signing in moves no funds" />
         </div>
@@ -60,7 +65,7 @@ export function ConnectView({ step, onConnect }: { step: ConnectStep; onConnect:
           {copy ? (
             <div
               role={bad ? 'alert' : 'status'}
-              className={`rounded-md p-4 ${bad ? 'bg-deny-tint' : 'bg-surface-2'}`}
+              className={`rounded-md p-4 ${bad ? 'bg-deny-tint' : 'bg-card shadow-e1'}`}
               data-state={step}
             >
               <p

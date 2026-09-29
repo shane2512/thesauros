@@ -358,6 +358,33 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-024 — App UI replaced with the Stitch "Landing Page Recreation" screens
+
+The whole authenticated app (shell, dashboard, fund sheet, freeze modal, 4-step onboarding, activity,
+approvals, policy, recipients, settings, connect) was rebuilt from the nine Stitch mobile screens
+(project 11119537162809807173), then audited with the tastemaker skill and revised. Presentation
+only: every API route, signing flow (`useSignFlow`, server-issued messages), Policy Engine path and
+freeze/sweep path (I7) is unchanged — the screens call the same functions they called before.
+
+- **Tokens:** cool-grey ground `#f8f9fa`, white `.card` on a hairline shadow, ink `#191c1d`, brand
+  yellow `#FCE300` for filled surfaces only; a named type scale (`text-cap` … `text-display`) instead
+  of one-off pixel sizes. Dark mode kept.
+- **Fonts (no new npm dependency — `next/font/google`):** Space Grotesk for headlines and money (from
+  Stitch); UnifrakturCook for the wordmark only, next to the unchanged `brand/logo/thesauros-logo.svg`
+  (copied to `apps/web/public/logo/`), so the app carries the landing page's identity. Four families
+  in total — a deliberate exception, since mono is limited to addresses/hashes.
+- **Honesty over Stitch's placeholders:** Stitch's invented figures (APY, "$14.2k executed", ERC-4337,
+  multisig quorum, "ZK proof", QR code) were not shipped. Every number on screen comes from
+  `/api/dashboard`, `/api/decisions` or `/api/policy`; "Verify proof" became the real
+  `/api/audit/verify` chain walk, "Download receipt" saves the decision JSON the API returned.
+- **New route:** `/app/activity/[id]` (Event & proof) replaces the in-place expandable detail.
+  Activity cards needing approval deep-link to `/app/approvals?decision=<id>`, which opens that
+  approval's sign sheet. `/app/activity?filter=DENY` is linked from the dashboard's blocked count.
+- **Navigation:** four tabs (Treasury, Activity, Approvals, Settings) as in Stitch; Recipients and
+  Policy are reached from the dashboard and from Settings (Policy previously had no link at all).
+- **Removed:** the unused recharts balance card (`components/ui/metric-*`, `progress-metric-card`).
+  `recharts` stays in package.json for now; dropping it is a lockfile change for a separate commit.
+
 ### D-023 — Owner sweep: reserve gas headroom, and confirm on-chain before reporting success
 
 Found live, right after D-022 fixed the simulation transport: the sweep executed and reported

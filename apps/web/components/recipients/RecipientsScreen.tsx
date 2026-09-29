@@ -10,18 +10,20 @@ import { useState } from 'react';
 import { AddRecipientSign } from '@/components/sign/AddRecipientSign';
 import { EditRecipientSign } from '@/components/sign/EditRecipientSign';
 import { PolicySign } from '@/components/sign/PolicySign';
+import { IconCopy, IconCheck, IconRecipients } from '@/components/icons';
 import {
   Banner,
   Button,
   EmptyState,
   ErrorPanel,
-  Row,
+  PageHeading,
   RowSkeleton,
+  Tag,
   TextButton,
 } from '@/components/primitives';
 import { apiDelete } from '@/lib/api';
 import { zRecipientList, zRecipientRemoved, type Recipient } from '@/lib/contracts';
-import { formatMoney, groupAddress, toBig } from '@/lib/format';
+import { formatToken, shortAddress, toBig } from '@/lib/format';
 import { useApi } from '@/lib/useApi';
 
 type Mode = 'list' | 'add' | 'edit' | 'sign-policy';
@@ -61,9 +63,11 @@ export function RecipientsScreen() {
 
   if (mode === 'add')
     return (
-      <div className="px-4 pt-6">
-        <TextButton onClick={() => setMode('list')}>← Back to recipients</TextButton>
-        <div className="pt-4">
+      <div className="px-4 pt-2">
+        <TextButton className="-ml-3" onClick={() => setMode('list')}>
+          ← Back to recipients
+        </TextButton>
+        <div className="card mt-2 p-4">
           <AddRecipientSign
             existing={recipients}
             onAdded={() => {
@@ -77,9 +81,11 @@ export function RecipientsScreen() {
 
   if (mode === 'edit' && editing)
     return (
-      <div className="px-4 pt-6">
-        <TextButton onClick={() => setMode('list')}>← Back to recipients</TextButton>
-        <div className="pt-4">
+      <div className="px-4 pt-2">
+        <TextButton className="-ml-3" onClick={() => setMode('list')}>
+          ← Back to recipients
+        </TextButton>
+        <div className="card mt-2 p-4">
           <EditRecipientSign
             recipient={editing}
             onCancel={() => setMode('list')}
@@ -94,7 +100,7 @@ export function RecipientsScreen() {
 
   if (mode === 'sign-policy')
     return (
-      <div className="px-4 pt-6">
+      <div className="px-4 pt-4">
         <Banner tone="info" title="One more step">
           This change isn&apos;t in effect yet. Sign the next policy version so Thesauros picks it
           up.
@@ -109,13 +115,16 @@ export function RecipientsScreen() {
     );
 
   return (
-    <div>
-      <div className="px-4 pt-4" aria-live="polite">
+    <div className="flex flex-col gap-4 px-4 pt-4">
+      <PageHeading sub="The only addresses Thesauros may ever pay. Matched exactly, by address and chain.">
+        Recipients
+      </PageHeading>
+      <div aria-live="polite">
         {q.isLoading ? (
-          <>
+          <div className="card">
             <RowSkeleton />
             <RowSkeleton />
-          </>
+          </div>
         ) : q.error ? (
           <ErrorPanel
             title="Thesauros could not load your recipients"
@@ -128,50 +137,77 @@ export function RecipientsScreen() {
             body="Add someone Thesauros is allowed to pay. Every address is matched exactly — no ENS, no look-alikes."
           />
         ) : (
-          <ul data-testid="recipients-list">
+          <ul data-testid="recipients-list" className="flex flex-col gap-2">
             {recipients.map((r: Recipient) => (
-              <li key={r.id}>
-                <Row
-                  title={r.label}
-                  sub={
-                    <>
-                      <span className="block font-mono text-small text-muted">
-                        {groupAddress(r.address).slice(0, 14)}…
-                      </span>
-                      <span className="block text-small text-muted">
-                        Up to {formatMoney(toBig(r.maxPerTx))} per payment
-                        {r.scheduleDayOfMonth
-                          ? ` · monthly on day ${r.scheduleDayOfMonth}`
-                          : ''} · {r.riskTier} risk
-                      </span>
-                    </>
-                  }
-                  right={
-                    <span className="flex flex-col items-end gap-1">
-                      <TextButton onClick={() => copy(r.address)}>
-                        {copied === r.address ? 'Copied' : 'Copy'}
-                      </TextButton>
-                      <TextButton
-                        onClick={() => {
-                          setEditing(r);
-                          setMode('edit');
-                        }}
+              <li key={r.id} className="card p-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-3 text-ink">
+                    <IconRecipients className="size-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-title font-semibold text-ink">{r.label}</span>
+                      <Tag
+                        tone={
+                          r.riskTier === 'high'
+                            ? 'deny'
+                            : r.riskTier === 'medium'
+                              ? 'warn'
+                              : 'quiet'
+                        }
                       >
-                        Edit
-                      </TextButton>
-                      <TextButton
-                        onClick={() => {
-                          setRemoveError(null);
-                          setRemoving(r);
-                        }}
-                      >
-                        Remove
-                      </TextButton>
-                    </span>
-                  }
-                />
+                        {r.riskTier} risk
+                      </Tag>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copy(r.address)}
+                      aria-label={
+                        copied === r.address ? 'Address copied' : `Copy ${r.label}'s address`
+                      }
+                      className="mt-1 inline-flex min-h-8 items-center gap-1.5 rounded-sm bg-surface-2 px-2 font-mono text-fine text-ink hover:bg-surface-3"
+                    >
+                      {shortAddress(r.address)}
+                      {copied === r.address ? (
+                        <IconCheck className="size-3.5" />
+                      ) : (
+                        <IconCopy className="size-3.5 text-muted" />
+                      )}
+                    </button>
+                    <p className="pt-1.5 text-meta text-muted">
+                      Up to{' '}
+                      <strong className="font-semibold text-ink">
+                        {formatToken(toBig(r.maxPerTx))} USDC
+                      </strong>{' '}
+                      per payment
+                      {r.scheduleDayOfMonth ? ` · monthly on day ${r.scheduleDayOfMonth}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(r);
+                      setMode('edit');
+                    }}
+                    className="h-11 rounded-sm bg-surface-3 text-meta font-bold text-ink hover:brightness-95"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemoveError(null);
+                      setRemoving(r);
+                    }}
+                    className="h-11 rounded-sm bg-deny-tint text-meta font-bold text-deny hover:brightness-95"
+                  >
+                    Remove
+                  </button>
+                </div>
                 {removing?.id === r.id ? (
-                  <div className="mx-4 mb-3 rounded-md bg-deny-tint p-3" role="alert">
+                  <div className="mt-3 rounded-md bg-deny-tint p-3" role="alert">
                     <p className="text-small text-deny">
                       Remove {r.label}? This won&apos;t affect the currently signed policy until you
                       sign again.
@@ -205,9 +241,7 @@ export function RecipientsScreen() {
         )}
       </div>
 
-      <div className="px-4 pt-6">
-        <Button onClick={() => setMode('add')}>Add recipient</Button>
-      </div>
+      <Button onClick={() => setMode('add')}>Add recipient</Button>
     </div>
   );
 }

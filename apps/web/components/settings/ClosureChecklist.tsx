@@ -3,6 +3,7 @@
 // steps are FreezeFlow's own domain — embedded here, not reimplemented. Export reuses Settings' own
 // export call. Delete personal data never touches audit_log (I6): it only clears the PII fields
 // Thesauros owns, via POST /api/account/delete-personal-data.
+import { IconCheck } from '@/components/icons';
 import { useState, type ReactNode } from 'react';
 import { FreezeFlow } from '@/components/freeze/FreezeFlow';
 import { Banner, Button, Eyebrow } from '@/components/primitives';
@@ -32,7 +33,7 @@ function StepRow({
           }`}
           aria-hidden="true"
         >
-          {state === 'done' ? '✓' : n}
+          {state === 'done' ? <IconCheck className="size-4" /> : n}
         </span>
         <span className="text-h3 font-semibold text-ink">{title}</span>
         <span className="ml-auto text-small text-muted">{state === 'done' ? 'Done' : ''}</span>
@@ -93,7 +94,7 @@ export function ClosureChecklist() {
         — closing your account anonymizes it, it does not erase it.
       </p>
 
-      <ol className="px-4 pt-2">
+      <ol className="card mx-4 mt-2 px-4">
         <StepRow n={1} title="Freeze, revoke and sweep home" state={frozen ? 'done' : 'todo'}>
           <FreezeFlow frozen={frozen} onDone={() => dash.refetch()} onClose={() => undefined} />
         </StepRow>

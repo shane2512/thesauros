@@ -10,8 +10,10 @@ import {
   Button,
   EmptyState,
   ErrorPanel,
+  PageHeading,
   RowSkeleton,
   SegmentedControl,
+  Tag,
   TextButton,
 } from '@/components/primitives';
 import { zOnboarding, zPolicyView } from '@/lib/contracts';
@@ -33,8 +35,10 @@ export function PolicyScreen() {
 
   if (mode === 'edit')
     return (
-      <div className="px-4 pt-6">
-        <TextButton onClick={() => setMode('read')}>← Back to policy</TextButton>
+      <div className="px-4 pt-2">
+        <TextButton className="-ml-3" onClick={() => setMode('read')}>
+          ← Back to policy
+        </TextButton>
         {onboarding.isLoading ? (
           <RowSkeleton />
         ) : (
@@ -51,17 +55,22 @@ export function PolicyScreen() {
 
   if (mode === 'sign')
     return (
-      <div className="px-4 pt-6">
-        <TextButton onClick={() => setMode('edit')}>← Back to edit</TextButton>
-        <div className="pt-4">
-          <PolicySign onActivated={backToRead} />
+      <div className="px-4 pt-2">
+        <TextButton className="-ml-3" onClick={() => setMode('edit')}>
+          ← Back to edit
+        </TextButton>
+        <div className="pt-2">
+          <PolicySign onActivated={backToRead} onEdit={() => setMode('edit')} />
         </div>
       </div>
     );
 
   return (
-    <div>
-      <div className="flex items-center justify-between px-4 pt-4">
+    <div className="flex flex-col gap-4 px-4 pt-4">
+      <PageHeading sub="The only rules Thesauros can act under. Plain code checks every move against them.">
+        Your policy
+      </PageHeading>
+      <div>
         <SegmentedControl
           label="View"
           options={[
@@ -73,7 +82,7 @@ export function PolicyScreen() {
         />
       </div>
 
-      <div className="px-4 pt-4" aria-live="polite">
+      <div aria-live="polite">
         {policy.isLoading ? (
           <RowSkeleton />
         ) : policy.error ? (
@@ -90,35 +99,38 @@ export function PolicyScreen() {
           />
         ) : view === 'sentences' ? (
           <div data-testid="policy-sentences-view">
-            <p className="font-mono text-label font-semibold tracking-[0.12em] text-muted uppercase">
-              Policy v{policy.data.version}
-            </p>
-            <ol className="mt-2 space-y-2 rounded-md bg-surface-2 p-4">
+            <div className="flex items-center justify-between px-0.5 pb-2">
+              <span className="label">Active directives ({policy.data.sentences.length})</span>
+              <Tag tone="accent">v{policy.data.version} active</Tag>
+            </div>
+            <ol className="card divide-y divide-line overflow-hidden">
               {policy.data.sentences.map((s, i) => (
-                <li key={s} className="flex gap-3 text-small text-ink">
-                  <span className="shrink-0 font-mono text-mono text-faint">{i + 1}.</span>
-                  <span>{s}</span>
+                <li key={s} className="flex items-start gap-3 p-4">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-surface-3 font-display text-ui font-bold text-ink">
+                    {i + 1}
+                  </span>
+                  <span className="pt-1 text-ui leading-5 text-ink">{s}</span>
                 </li>
               ))}
             </ol>
           </div>
         ) : (
           <div data-testid="policy-json-view">
-            <p className="pb-2 text-small text-muted">
+            <p className="pb-2 text-meta text-muted">
               For reference only. This is not something you edit directly — use Edit mandate below.
             </p>
-            <pre className="overflow-x-auto rounded-md bg-surface-2 p-4 font-mono text-mono text-ink">
+            <pre className="card overflow-x-auto p-4 font-mono text-fine leading-5 text-ink">
               {JSON.stringify(policy.data.body, null, 2)}
             </pre>
           </div>
         )}
       </div>
 
-      <div className="px-4 pt-6">
+      {policy.data?.version ? (
         <Button variant="ghost" onClick={() => setMode('edit')}>
           Edit mandate
         </Button>
-      </div>
+      ) : null}
     </div>
   );
 }
