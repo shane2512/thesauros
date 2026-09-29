@@ -1,12 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { IconBack } from '@/components/icons';
-import { StatusPill, Wordmark } from '@/components/primitives';
-import { pillLabel, type PillState } from '@/lib/status';
+import { IconBack, IconFreeze, IconUser } from '@/components/icons';
+import { Wordmark } from '@/components/primitives';
 import { NotificationBell } from './NotificationBell';
 
-/** The global Freeze control: calm outlined pill; a filled chip once frozen. Still a BUTTON when
- * frozen — freezing is step 1 of three, so a reopened modal has to be reachable to finish it. */
+/** The global Freeze control: a red-tint pill; solid red once frozen. Still a BUTTON when frozen —
+ * freezing is step 1 of three, so a reopened modal has to be reachable to finish it. */
 export function FreezeButton({ frozen, onOpen }: { frozen: boolean; onOpen: () => void }) {
   return (
     <button
@@ -14,61 +13,79 @@ export function FreezeButton({ frozen, onOpen }: { frozen: boolean; onOpen: () =
       onClick={onOpen}
       aria-haspopup="dialog"
       {...(frozen ? { 'aria-live': 'assertive' as const } : {})}
-      className={
+      className={`inline-flex h-11 items-center gap-1.5 rounded-full px-3.5 text-cap font-bold tracking-[0.06em] uppercase transition-colors ${
         frozen
-          ? 'inline-flex h-11 items-center rounded-full bg-deny-fill px-4 text-small font-bold text-on-deny-fill'
-          : 'inline-flex h-11 items-center rounded-full border border-deny/40 px-4 text-small font-bold text-deny transition-colors hover:border-deny hover:bg-deny-tint focus-visible:border-deny'
-      }
+          ? 'bg-deny-fill text-on-deny-fill'
+          : 'bg-deny-tint text-deny hover:bg-deny-fill hover:text-on-deny-fill'
+      }`}
     >
+      <IconFreeze className="size-4" />
       {frozen ? 'Frozen' : 'Freeze'}
     </button>
   );
 }
 
+export function NetworkPill({ testnet }: { testnet: boolean }) {
+  return (
+    <span className="hidden items-center gap-1.5 rounded-full bg-surface-3 px-2.5 py-1 min-[380px]:inline-flex">
+      <span className="size-2 rounded-full bg-accent breathe" aria-hidden="true" />
+      <span className="text-cap leading-[14px] font-bold whitespace-nowrap text-muted">
+        {testnet ? 'Arc Testnet' : 'Arc'}
+      </span>
+    </span>
+  );
+}
+
 export function AppHeader({
-  title,
-  pill,
-  pending,
+  back,
   frozen,
+  testnet,
   onFreeze,
-  wide,
 }: {
-  title: string | null;
-  pill: PillState | null;
-  pending: number;
+  /** A sub-page: back arrow + centred title instead of the wordmark. */
+  back: { href: string; title: string } | null;
   frozen: boolean;
+  testnet: boolean;
   onFreeze: () => void;
-  wide: boolean;
 }) {
   return (
-    <header className="glass sticky top-0 z-30 h-14">
-      <div
-        className={`mx-auto flex h-full items-center justify-between gap-3 px-4 ${
-          wide ? 'max-w-[440px] lg:max-w-[1080px]' : 'max-w-[440px]'
-        }`}
-      >
-        {title ? (
+    <header className="glass sticky top-0 z-30 pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto flex h-16 max-w-[480px] items-center justify-between gap-2 px-4 lg:max-w-[1040px]">
+        {back ? (
           <>
             <Link
-              href="/app"
-              aria-label="Back to home"
-              className="group -ml-2 flex size-11 items-center justify-center text-ink"
+              href={back.href}
+              aria-label="Back"
+              className="group -ml-2 flex size-11 items-center justify-center rounded-full text-ink hover:bg-surface-3"
             >
-              <IconBack className="size-6 transition-transform duration-300 ease-out group-hover:-translate-x-0.5 motion-reduce:transition-none" />
+              <IconBack className="size-[22px] transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transition-none" />
             </Link>
-            <span className="min-w-0 flex-1 truncate text-h3 font-semibold text-ink">{title}</span>
+            <span className="min-w-0 flex-1 truncate text-center text-small font-bold tracking-[0.02em] text-ink uppercase">
+              {back.title}
+            </span>
           </>
         ) : (
-          <>
+          <div className="flex min-w-0 items-center gap-2">
             <Link href="/app" className="flex min-h-11 items-center" aria-label="Thesauros home">
               <Wordmark />
             </Link>
-            {pill ? <StatusPill state={pill} label={pillLabel(pill, pending)} /> : <span />}
-          </>
+            <NetworkPill testnet={testnet} />
+          </div>
         )}
-        <div className="flex items-center gap-1">
-          <NotificationBell />
+        <div className="flex shrink-0 items-center gap-0.5">
           <FreezeButton frozen={frozen} onOpen={onFreeze} />
+          <NotificationBell />
+          {back ? null : (
+            <Link
+              href="/app/settings"
+              aria-label="Account and settings"
+              className="flex size-11 items-center justify-center"
+            >
+              <span className="flex size-8 items-center justify-center rounded-full bg-inverse text-on-inverse">
+                <IconUser className="size-[18px]" />
+              </span>
+            </Link>
+          )}
         </div>
       </div>
     </header>

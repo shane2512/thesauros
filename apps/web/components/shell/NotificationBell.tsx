@@ -73,16 +73,16 @@ export function NotificationBell() {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-        className="relative flex size-11 items-center justify-center text-ink"
+        className="relative flex size-11 items-center justify-center rounded-full text-ink hover:bg-surface-3"
       >
-        <IconBell className="size-6" />
+        <IconBell className="size-[22px]" />
         <span aria-live="polite" className="sr-only">
           {unread > 0 ? `${unread} unread notifications` : 'No unread notifications'}
         </span>
         {unread > 0 ? (
           <span
             aria-hidden="true"
-            className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-deny-fill text-[10px] font-bold text-on-deny-fill"
+            className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-accent text-micro font-bold text-on-accent ring-2 ring-card"
           >
             {unread > 9 ? '9+' : unread}
           </span>
@@ -98,10 +98,10 @@ export function NotificationBell() {
             aria-label="Notifications"
             tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
-            className="glass-sheet absolute top-14 right-4 max-h-[70dvh] w-[min(92vw,380px)] overflow-y-auto rounded-lg"
+            className="glass-sheet pop-in absolute top-16 right-4 max-h-[70dvh] w-[min(92vw,380px)] overflow-y-auto rounded-lg"
           >
             <div className="flex items-center justify-between px-4 py-3">
-              <h2 className="text-h3 font-bold text-ink">Notifications</h2>
+              <h2 className="font-display text-lead font-bold text-ink">Notifications</h2>
               <div className="flex items-center gap-2">
                 {unread > 0 ? (
                   <button
@@ -122,7 +122,7 @@ export function NotificationBell() {
                 </button>
               </div>
             </div>
-            <div className="border-t border-line bg-surface">
+            <div className="border-t border-line">
               {list.isLoading ? (
                 <>
                   <RowSkeleton />
