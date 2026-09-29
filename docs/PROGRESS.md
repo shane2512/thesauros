@@ -402,11 +402,31 @@ network prompt firing correctly) -> provision a real Circle wallet -> compile a 
 asking clarifying questions on an underspecified one, then compiling cleanly once complete) ->
 sign and activate the policy -> onboarding reaches `'done'` and redirects to `/app`.
 
-Known gaps, not attempted this pass: `/app/policy`, `/app/approvals`, `/app/recipients`,
-`/app/activity`, `/app/settings`, `/app/settings/close` (Steward's remaining 6 screens) — the
-`.steward-ui-source/` reference is still present for whichever of these is tackled next.
-`ProgressMetricCard`'s balance-history chart (recharts) was also not ported; the dashboard shows a
-plain balance figure instead.
+**Later in the same effort**: ported the remaining 6 screens. `/app/policy`, `/app/approvals`,
+`/app/recipients` first (commit `8efa823`) — Policy split into a GET (active-policy view) and a new
+`/api/policy/prepare` (recompiles the latest mandate's text fresh against current recipients/vaults
+on every call, fixing a real gap where a newly-added recipient would be invisible to a stale
+compiled draft); Approvals now makes the signature optional (rejecting needs none, only approving
+does); Recipients always routes a successful add into signing the next policy version. Then
+`/app/activity` and `/app/settings`(`/close`): Activity ports Steward's tabbed decision detail
+(Context/Proposal/Verifier/Policy checks/Simulation/Transaction) verbatim, adapted to this app's
+`zDecisionDetail` shape (no `contextFacts`/`screen` fields — the Context tab shows trigger/kind/
+status instead) and its `?before=` cursor param instead of Steward's `?cursor=`. Settings turned out
+to need far less invention than expected: `packages/db` already had `verifyChain` (a real,
+previously-unused hash-chain recompute for I6), `scrubUserPersonalData`, and `setTelegramChatId`
+implemented from an earlier phase but never wired to a route — this pass added the three small
+routes (`/api/audit/verify`, `/api/audit/export`, `/api/me/telegram`,
+`/api/account/delete-personal-data`) and a `telegramEnabled`/`zMe.user.telegramChatId` field each,
+rather than fabricating the feature from scratch. `ClosureChecklist` embeds the existing `FreezeFlow`
+for step 1 and gates "delete personal data" on the wallet already being frozen, matching Steward's
+own ordering.
+
+`ProgressMetricCard`'s balance-history chart (recharts) was not ported; the dashboard shows a plain
+balance figure instead. `.steward-ui-source/` can be deleted now that all 9 routes are ported — kept
+for now in case a later pass wants to re-check styling.
+
+Exit gate for this final slice: `pnpm --filter @thesauros/web typecheck` clean, `pnpm lint` clean,
+`pnpm --filter @thesauros/web build` succeeded (34 routes).
 
 ### D-020 — Ported Steward's visual design system (tokens/primitives only, not branding/routes)
 
