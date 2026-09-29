@@ -10,20 +10,36 @@ import {
   insertAgentDecision,
   insertVerdict,
   updateAgentDecision,
+  updateExecution,
   type Db,
   type Wallet,
 } from '@thesauros/db';
 import { evaluate, signReceipt, hashProposal } from '@thesauros/policy';
 import { simulateProposalCalls } from '@thesauros/risk';
-import { hashCanonical, zPolicy, type Env, type Policy, type Proposal } from '@thesauros/shared';
+import {
+  hashCanonical,
+  SYSTEM_CEILINGS,
+  zPolicy,
+  type Env,
+  type Policy,
+  type Proposal,
+} from '@thesauros/shared';
 import {
   buildCalls,
   callsHash,
+  confirmExecution,
+  createCircleClient,
+  circleTxSender,
   execute,
   getBalances,
   publicClientFor,
   type BuildContext,
 } from '@thesauros/wallet';
+
+/** Arc's finality is deterministic and near-instant (docs/VERIFY.md); this is a generous multiple
+ * of that, not a guess, and it keeps the owner-facing HTTP request bounded. */
+const SWEEP_CONFIRM_TIMEOUT_MS = 20_000;
+const SWEEP_CONFIRM_POLL_MS = 1_000;
 
 export type SweepOutcome =
   | { status: 'executed'; providerTxId: string; amountBaseUnits: string }
@@ -56,12 +72,24 @@ export async function runOwnerSweep(
   const { agentUsdc } = balances.value;
   if (agentUsdc === 0n) return { status: 'failed', reason: 'agent wallet already holds 0 USDC' };
 
+  // Arc's native gas token IS USDC (docs/VERIFY.md row 3) — the same balance sweep_home moves. A
+  // transaction's own fee is deducted from it before the transfer call runs, so sweeping the FULL
+  // measured balance leaves less than the transfer asks for and reverts on-chain (confirmed live:
+  // FAILED_ON_ONCHAIN, even though a free eth_call replay of the identical calldata succeeds).
+  // Holding back a reserve is what lets the sweep's own transaction pay for itself.
+  if (agentUsdc <= SYSTEM_CEILINGS.SWEEP_GAS_RESERVE_MICRO_USD)
+    return {
+      status: 'failed',
+      reason: 'agent wallet balance is too small to cover its own gas fee — nothing to sweep',
+    };
+  const sweepAmount = agentUsdc - SYSTEM_CEILINGS.SWEEP_GAS_RESERVE_MICRO_USD;
+
   const proposal: Proposal = {
     kind: 'sweep_home',
     params: {},
     expectedDeltas: [
-      { token: usdc, holder: 'agent', delta: -agentUsdc },
-      { token: usdc, holder: 'treasury', delta: agentUsdc },
+      { token: usdc, holder: 'agent', delta: -sweepAmount },
+      { token: usdc, holder: 'treasury', delta: sweepAmount },
     ],
     rationale: 'Owner-initiated sweep to treasury',
     citedFactIds: [],
@@ -72,7 +100,7 @@ export async function runOwnerSweep(
   const buildContext: BuildContext = {
     agentWalletAddress,
     spendPermissionManagerAddress: getAddress(env.SPEND_PERMISSION_MANAGER_ADDRESS),
-    agentUsdcBalance: agentUsdc,
+    agentUsdcBalance: sweepAmount,
     vaultPositions: {},
     allowMainnet: env.THESAUROS_ALLOW_MAINNET,
   };
@@ -175,8 +203,24 @@ export async function runOwnerSweep(
     proposalHash: verdict.proposalHash,
   });
 
+  if (!env.CIRCLE_API_KEY || !env.CIRCLE_ENTITY_SECRET) {
+    return { status: 'failed', reason: 'CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET are required' };
+  }
+  const ref = wallet.agentWalletRef as { circleWalletId?: string } | null;
+  if (!ref?.circleWalletId)
+    return { status: 'failed', reason: 'wallet has no Circle wallet id on record' };
+  const circleClient = createCircleClient({
+    apiKey: env.CIRCLE_API_KEY,
+    entitySecret: env.CIRCLE_ENTITY_SECRET,
+  });
+
   const outcome = await execute(
-    { db, sender: await senderFor(env, wallet, agentWalletAddress), receiptKey, now: () => now },
+    {
+      db,
+      sender: circleTxSender(circleClient, ref.circleWalletId, agentWalletAddress),
+      receiptKey,
+      now: () => now,
+    },
     {
       walletId: wallet.id,
       decisionId: decision.id,
@@ -190,25 +234,56 @@ export async function runOwnerSweep(
   if (!outcome.ok)
     return { status: 'failed', reason: `${outcome.error.code}: ${outcome.error.message}` };
 
+  // execute() only means Circle ACCEPTED the submission — not that it landed. Confirm against the
+  // real chain before telling the owner anything moved (this route's own header comment: I7 means
+  // sweep works without the worker, not that it skips the worker's own verification step).
+  const confirmed = await confirmExecution(
+    {
+      db,
+      client: circleClient,
+      publicClient,
+      now: () => new Date(),
+      timeoutMs: SWEEP_CONFIRM_TIMEOUT_MS,
+      pollIntervalMs: SWEEP_CONFIRM_POLL_MS,
+    },
+    {
+      executionId: outcome.value.execution.id,
+      providerTxId: outcome.value.providerTxId,
+      token: usdc,
+      holders: { agent: agentWalletAddress, treasury: policy.treasuryAddress },
+      expectedDeltas: proposal.expectedDeltas,
+    },
+  );
+  if (!confirmed.ok) {
+    await updateExecution(db, outcome.value.execution.id, {
+      status: 'timeout',
+      error: confirmed.error,
+    });
+    return { status: 'failed', reason: confirmed.error };
+  }
+  if (confirmed.value.status !== 'confirmed') {
+    await updateExecution(db, outcome.value.execution.id, {
+      status: 'failed',
+      error: confirmed.value.reason ?? 'unknown',
+      ...(confirmed.value.txHash ? { txHash: confirmed.value.txHash } : {}),
+    });
+    return {
+      status: 'failed',
+      reason: confirmed.value.reason ?? 'the transaction did not confirm on chain',
+    };
+  }
+
+  await updateExecution(db, outcome.value.execution.id, {
+    status: 'confirmed',
+    txHash: confirmed.value.txHash,
+    confirmedAt: now,
+  });
+
   return {
     status: 'executed',
     providerTxId: outcome.value.providerTxId,
-    amountBaseUnits: agentUsdc.toString(),
+    amountBaseUnits: sweepAmount.toString(),
   };
 }
 
 const bigintToString = (_k: string, v: unknown) => (typeof v === 'bigint' ? v.toString() : v);
-
-async function senderFor(env: Env, wallet: Wallet, agentWalletAddress: `0x${string}`) {
-  const { createCircleClient, circleTxSender } = await import('@thesauros/wallet');
-  if (!env.CIRCLE_API_KEY || !env.CIRCLE_ENTITY_SECRET) {
-    throw new Error('CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET are required to execute a sweep');
-  }
-  const client = createCircleClient({
-    apiKey: env.CIRCLE_API_KEY,
-    entitySecret: env.CIRCLE_ENTITY_SECRET,
-  });
-  const ref = wallet.agentWalletRef as { circleWalletId?: string } | null;
-  if (!ref?.circleWalletId) throw new Error('wallet has no Circle wallet id on record');
-  return circleTxSender(client, ref.circleWalletId, agentWalletAddress);
-}

@@ -358,6 +358,44 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-023 — Owner sweep: reserve gas headroom, and confirm on-chain before reporting success
+
+Found live, right after D-022 fixed the simulation transport: the sweep executed and reported
+`{status: 'executed'}`, but the funds hadn't actually moved. Two separate bugs:
+
+1. **`sweep_home` swept the agent wallet's full measured USDC balance to zero.** Arc's native gas
+   token IS USDC — the same balance the transfer moves (docs/VERIFY.md row 3). A transaction's own
+   fee is deducted from that balance before the transfer call runs, so a transfer built from the
+   FULL balance asks for more than remains once gas is paid, and reverts on-chain. Confirmed by
+   querying Circle directly: `state: "FAILED"`, `errorReason: "FAILED_ON_ONCHAIN"`, with a real
+   `networkFee` charged — and replaying the identical calldata as a free `eth_call` (no gas
+   deduction) succeeded, isolating gas-vs-balance as the exact cause. Fixed by reserving
+   `SYSTEM_CEILINGS.SWEEP_GAS_RESERVE_MICRO_USD` (20,000 micro-USD / $0.02 — comfortable margin over
+   the ~$0.0015 observed real fee) from the amount `apps/web/lib/sweep.ts` builds the proposal,
+   `expectedDeltas`, and `buildContext.agentUsdcBalance` from. `packages/wallet/src/actionRegistry.ts`
+   needed no change: `BuildContext.agentUsdcBalance` has exactly one consumer (`sweep_home`), so its
+   caller deciding "how much to actually sweep" rather than "the true full balance" is a safe,
+   minimal redefinition.
+2. **`runOwnerSweep` never confirmed the transaction landed.** `execute()`'s success only means
+   Circle *accepted the submission* (`status: 'submitted'`) — the route then reported `'executed'`
+   immediately, without ever calling `confirmExecution` (which polls Circle for terminal state and
+   cross-checks the chain's own Transfer logs against the expected deltas — 5.5's whole point).
+   Confirmed via the DB: the `executions` row for the failed sweep was permanently stuck at
+   `status: 'submitted'` with an empty `tx_hash`, because nothing had ever verified or recorded
+   the real outcome. Fixed: `runOwnerSweep` now calls `confirmExecution` (bounded to 20s/1s-poll —
+   Arc's finality is deterministic and near-instant, so this isn't a guessed timeout) and only
+   returns `'executed'` once the chain confirms it; `updateExecution` now records the real
+   `status`/`txHash`/`confirmedAt` (or `failed`/`timeout` with the reason) instead of leaving the
+   row silently wrong forever.
+
+Separately noticed, not fixed here (flagged for later, doesn't block sweep): the worker's own
+`exec.confirm` job handler (`apps/worker/src/jobs/confirm.ts`) has the same gap — it calls
+`confirmExecution` and logs the result but never calls `updateExecution`, so agent-initiated
+executions' rows likely have the same stuck-at-`submitted` problem. Worth a dedicated pass.
+
+Exit gate: `pnpm typecheck`, `pnpm lint`, `pnpm check:arch`, `pnpm test` (601+352, policy still 100%
+branch coverage), `pnpm --filter @thesauros/web build` all green.
+
 ### D-022 — Simulation transport switched from `eth_simulateV1` to `Multicall3From` (Arc's RPC doesn't support it)
 
 Found live while testing an owner-initiated sweep: it was denied with

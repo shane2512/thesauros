@@ -46,6 +46,14 @@ export const SYSTEM_CEILINGS = {
   RECIPIENT_TIER_CAP_MEDIUM_MICRO_USD: 10_000n * USDC,
   /** A recipient screened 'high' risk cannot be paid autonomously at all; the owner must approve. */
   RECIPIENT_TIER_CAP_HIGH_MICRO_USD: 0n,
+
+  // --- Arc-specific (D-023): USDC is Arc's native gas token, so a transaction's own fee is paid ---
+  // out of the SAME balance a sweep is trying to move to zero. Sweeping the full measured balance
+  // deducts gas first, leaving less than the transfer call asks for, which reverts on-chain
+  // (FAILED_ON_ONCHAIN) even though a free eth_call replay of the identical calldata succeeds.
+  /** Held back from every sweep so the sweep's own transaction can pay for itself. Real observed fee
+   * on Arc testnet was ~0.0015 USDC; this leaves headroom for gas-price movement. */
+  SWEEP_GAS_RESERVE_MICRO_USD: 20_000n,
 } as const;
 
 export type SystemCeilings = typeof SYSTEM_CEILINGS;
