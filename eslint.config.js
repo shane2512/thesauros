@@ -15,6 +15,9 @@ export default tseslint.config(
       'scripts/fixtures/**',
       'packages/db/drizzle/**',
       'apps/web/components/ui/**',
+      // Scratch reference copy of Steward's original UI source, left by a peer session for this
+      // one restyle pass (D-020/D-021) — not part of Thesauros, deleted once no longer needed.
+      '.steward-ui-source/**',
       '**/*.cjs',
       '**/next-env.d.ts',
     ],

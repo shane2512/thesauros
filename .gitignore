@@ -1,4 +1,7 @@
 node_modules/
+# Scratch reference copy of Steward's original UI, left by a peer session for the D-020/D-021
+# restyle pass. Not part of Thesauros; safe to delete once no longer needed as a reference.
+.steward-ui-source/
 .env
 .env.*
 !.env.example
