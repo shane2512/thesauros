@@ -17,11 +17,12 @@ export const zConfig = z.object({
   demoMode: z.boolean(),
   chainId: z.number(),
   explorerBase: z.string(),
+  telegramEnabled: z.boolean(),
 });
 export type ConfigResponse = z.infer<typeof zConfig>;
 
 export const zMe = z.object({
-  user: z.object({ id: z.string(), address: z.string() }),
+  user: z.object({ id: z.string(), address: z.string(), telegramChatId: z.string().nullable() }),
   wallet: z
     .object({
       id: z.string(),
@@ -265,3 +266,21 @@ export const zNotificationList = z.object({
   unreadCount: z.number(),
 });
 export type NotificationList = z.infer<typeof zNotificationList>;
+
+// ── settings (audit export/verify, Telegram link, account closure) ─────────────────────────────
+export const zAuditVerify = z.union([
+  z.object({ ok: z.literal(true), rows: z.number() }),
+  z.object({
+    ok: z.literal(false),
+    break: z.object({
+      rowId: z.number(),
+      reason: z.string(),
+      expected: z.string(),
+      actual: z.string(),
+    }),
+  }),
+]);
+export type AuditVerify = z.infer<typeof zAuditVerify>;
+
+export const zTelegramLink = z.object({ chatId: z.string().nullable() });
+export const zPersonalDataDeleted = z.object({ done: z.boolean() });

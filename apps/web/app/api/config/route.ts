@@ -11,5 +11,6 @@ export async function GET(): Promise<NextResponse> {
     // verified — fine for a "view on explorer" link, not depended on for anything money-moving.
     explorerBase:
       env.CHAIN_ID === 5042 ? 'https://explorer.arc.io' : 'https://explorer.testnet.arc.io',
+    telegramEnabled: Boolean(env.TELEGRAM_BOT_TOKEN),
   });
 }
