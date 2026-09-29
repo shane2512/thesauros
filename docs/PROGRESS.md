@@ -421,12 +421,18 @@ rather than fabricating the feature from scratch. `ClosureChecklist` embeds the 
 for step 1 and gates "delete personal data" on the wallet already being frozen, matching Steward's
 own ordering.
 
-`ProgressMetricCard`'s balance-history chart (recharts) was not ported; the dashboard shows a plain
-balance figure instead. `.steward-ui-source/` can be deleted now that all 9 routes are ported — kept
-for now in case a later pass wants to re-check styling.
+`.steward-ui-source/` can be deleted now that all 9 routes are ported — kept for now in case a later
+pass wants to re-check styling.
 
 Exit gate for this final slice: `pnpm --filter @thesauros/web typecheck` clean, `pnpm lint` clean,
 `pnpm --filter @thesauros/web build` succeeded (34 routes).
+
+**Last gap closed**: ported `ProgressMetricCard`/`MetricChart`/`metric-controls` (the balance-history
+chart) into `BalanceCard`. Needed no new dependency — `recharts` and `lucide-react` were already in
+`apps/web/package.json`, unused leftovers from the Steward scaffold. Kept Steward's own honest
+framing rather than inventing a trend: Thesauros has no balance-history table, so the series is
+today's real balance plotted as a flat two-point line ("no observed change"), not fabricated
+movement. D-021 (the full route-for-route Steward UI port) is now complete with no known gaps.
 
 ### D-020 — Ported Steward's visual design system (tokens/primitives only, not branding/routes)
 
