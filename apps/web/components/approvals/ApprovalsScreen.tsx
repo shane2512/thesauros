@@ -1,12 +1,15 @@
 'use client';
 // Approvals queue. This screen only lists and filters; opening a card embeds the existing
 // ApprovalSheet/ApprovalSign (signing, message-fetching and verification live there, not here).
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { ApprovalSheet, timeLeft } from '@/components/sign/ApprovalSign';
+import { IconShieldCheck } from '@/components/icons';
 import {
   EmptyState,
   ErrorPanel,
   LoadBar,
+  PageHeading,
   Row,
   RowSkeleton,
   SegmentedControl,
@@ -47,9 +50,20 @@ export function ApprovalsScreen() {
   const approvals = q.data?.approvals ?? [];
   const open = approvals.find((a) => a.id === openId) ?? null;
 
+  // Deep link from an Activity card: `?decision=<id>` opens that decision's approval once loaded.
+  const wanted = useSearchParams().get('decision');
+  useEffect(() => {
+    if (!wanted) return;
+    const hit = approvals.find((a) => a.decisionId === wanted);
+    if (hit) setOpenId(hit.id);
+  }, [wanted, approvals]);
+
   return (
-    <div>
-      <div className="px-4 pt-4">
+    <div className="flex flex-col gap-4 px-4 pt-4">
+      <PageHeading sub="Thesauros asks for your signature only when a rule says a move needs you.">
+        Approvals
+      </PageHeading>
+      <div>
         <SegmentedControl
           label="Filter by status"
           options={APPROVAL_FILTERS}
@@ -58,15 +72,15 @@ export function ApprovalsScreen() {
         />
       </div>
 
-      <div className="pt-2" aria-live="polite">
+      <div aria-live="polite">
         {q.isLoading ? (
-          <>
+          <div className="card">
             <LoadBar active />
             <RowSkeleton />
             <RowSkeleton />
-          </>
+          </div>
         ) : q.error && approvals.length === 0 ? (
-          <div className="pt-4">
+          <div className="-mx-4">
             <ErrorPanel
               title="Thesauros could not load your approvals"
               body="Nothing moved. Check your connection and try again."
@@ -83,7 +97,7 @@ export function ApprovalsScreen() {
             }
           />
         ) : (
-          <ul data-testid="approvals-list">
+          <ul data-testid="approvals-list" className="card divide-y divide-line overflow-hidden">
             {approvals.map((a) => {
               const status = displayStatus(a, now);
               const note = statusNote(status);
@@ -91,6 +105,7 @@ export function ApprovalsScreen() {
               return (
                 <li key={a.id}>
                   <Row
+                    icon={IconShieldCheck}
                     title={a.rationale ?? `Approval ${a.proposalHash.slice(0, 10)}…`}
                     sub={
                       <>
