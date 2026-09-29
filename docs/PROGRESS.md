@@ -358,6 +358,56 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-021 — Full route-for-route port of Steward's UI (superseding D-020's single-page scope)
+
+The human tested D-020's single-page restyle and said it still didn't look or flow like Steward's
+app — they wanted the actual userflow, not just the token system. A peer session (D-019/D-020's
+collaborator) copied Steward's real source into `.steward-ui-source/` (149 files, git-ignored,
+scratch-only) for this session to read directly rather than re-describe. Rebuilt Thesauros's
+frontend as Steward's actual multi-route structure: `/` (raw landing.html), `/connect`,
+`/onboarding` (4-step resumable wizard), `/app` (dashboard) with its shell (header, tab bar,
+freeze modal, notification bell), replacing D-017's single-page dashboard entirely.
+
+Every screen's markup/Tailwind classes/component tree came from Steward's real files; every
+data-fetching call was rewired to this app's own API (`/api/dashboard`, `/api/onboarding`,
+`/api/me`, `/api/notifications`, `/api/decisions[/id]`, plus API.md's original 12 routes), and
+three real Coinbase/Base-specific pieces were dropped rather than ported, per D-012:
+
+- **Spend Permission allowance meter** (Steward's `allowanceView`/`AllowanceMeter` on the
+  dashboard) — Circle has no per-wallet on-chain allowance to visualize.
+- **Onboarding's spend-permission-grant step** — Steward's wizard has 5 steps; this one has 4,
+  because there is nothing to grant.
+- **The freeze flow's on-chain revoke step** — kept the exact 3-step visual structure (the human
+  asked for the same userflow), but step 2 now completes instantly with no signature, since
+  there's no separate on-chain permission to revoke.
+
+`wagmi` was dropped as a dependency (nothing imports it — one injected-wallet connector needs no
+multi-connector library, D-017) along with the Coinbase-specific `useSigner`/`SignSurface`
+machinery it powered; `lib/injectedWallet.ts`'s own `ensureArcNetwork()` replaces it, and is now
+also what makes the connect flow actually check/prompt for the Arc network (a real bug found live:
+a wallet left on Base Sepolia from testing Steward stayed there silently through sign-in, since
+`personal_sign` is chain-agnostic and nothing else checked).
+
+The landing page (`generated/landing.html`, Steward's real 750-line marketing page, served as a
+raw file to keep its scroll-reveal animations) got the same treatment: branding swapped
+throughout, but every specific evidentiary claim — "48/48 malicious cases blocked", a Base Sepolia
+revoke tx hash, a "docs/SECURITY_REVIEW.md" citation — was replaced with Thesauros's own real,
+checkable numbers (10/10 adversarial cases held, 100% policy branch coverage, 22 rules, the live
+`demo:attack` R05/R06 denials) rather than carried over verbatim, since those specific figures
+don't hold for this codebase and repeating them would be fabricating evidence, not restyling a page.
+
+Verified live end-to-end against the real dev Postgres and Circle sandbox after a full DB reset
+(the human asked for one to test onboarding as a genuinely new user): connect (with the Arc
+network prompt firing correctly) -> provision a real Circle wallet -> compile a mandate (correctly
+asking clarifying questions on an underspecified one, then compiling cleanly once complete) ->
+sign and activate the policy -> onboarding reaches `'done'` and redirects to `/app`.
+
+Known gaps, not attempted this pass: `/app/policy`, `/app/approvals`, `/app/recipients`,
+`/app/activity`, `/app/settings`, `/app/settings/close` (Steward's remaining 6 screens) — the
+`.steward-ui-source/` reference is still present for whichever of these is tackled next.
+`ProgressMetricCard`'s balance-history chart (recharts) was also not ported; the dashboard shows a
+plain balance figure instead.
+
 ### D-020 — Ported Steward's visual design system (tokens/primitives only, not branding/routes)
 
 The human asked for Thesauros's UI to visually match Steward's exactly. Asked the peer session
