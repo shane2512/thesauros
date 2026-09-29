@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import type { Metadata } from 'next';
+import { Providers } from '@/components/Providers';
 import './globals.css';
 
 // Machine data (addresses, hashes, tx ids, eyebrow labels) reads Geist Mono; everything else is
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Skip to content
         </a>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
