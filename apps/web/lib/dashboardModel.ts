@@ -36,6 +36,14 @@ export function runwayView(d: Dashboard): RunwayView {
   return { liquid: l, buffer, fillPct: pctOf(l, buffer * 2n), covered: l >= buffer };
 }
 
+/** How many times over the runway buffer the liquid funds cover it: `3.0x`, floored to one decimal.
+ * bigint in, string out (I12). Null without a buffer to measure against. */
+export function coverage(liquidBase: bigint, buffer: bigint | null): string | null {
+  if (buffer === null || buffer <= 0n) return null;
+  const tenths = (liquidBase * 10n) / buffer;
+  return `${tenths / 10n}.${tenths % 10n}x`;
+}
+
 /** `14:02` local, for "as of" indicators. */
 export function clockTime(epochMs: number): string {
   const d = new Date(epochMs);

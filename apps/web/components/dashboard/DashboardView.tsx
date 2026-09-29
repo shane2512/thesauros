@@ -1,42 +1,48 @@
 'use client';
 // Dashboard, presentational. Every figure arrives already computed by the server; this file
-// arranges it. Adapted from Steward's own S4 screen: dropped the Spend Permission allowance meter
-// (D-012/D-019 item 9 — no on-chain per-wallet allowance in Circle's model); the balance-history
-// chart is ported (ProgressMetricCard/recharts, both already dependencies), with an honest flat
-// line rather than a fabricated trend, since there is no balance-history table to plot from.
+// arranges it. No invented numbers: no trend line (there is no balance-history table), no APY
+// (the vault's rate isn't on the wire) — only what `/api/dashboard` actually returns.
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { DecisionRow } from '@/components/activity/DecisionRow';
 import {
-  IconActivity,
-  IconAdd,
+  IconAgent,
   IconApprovals,
+  IconChevron,
+  IconCopy,
+  IconCheck,
+  IconExternal,
+  IconGavel,
+  IconLedger,
+  IconAdd,
+  IconOutward,
+  IconRadar,
   IconRecipients,
   IconRefresh,
+  IconSavings,
   IconShield,
-  IconVault,
-  IconWallet,
+  IconShieldCheck,
+  IconGauge,
+  IconPeople,
   type IconComponent,
 } from '@/components/icons';
 import { CopyAddress } from '@/components/ui/CopyAddress';
-import ProgressMetricCard, { type SeriesPoint } from '@/components/ui/progress-metric-card';
 import { Sheet } from '@/components/ui/Sheet';
-import { Eyebrow, Money, Row, TextButton, VerdictBadge } from '@/components/primitives';
+import { Button, Money, StatusPill, Tag, VerdictBadge } from '@/components/primitives';
 import type { Dashboard } from '@/lib/contracts';
-import { clockTime, runwayView, totalManaged } from '@/lib/dashboardModel';
-import { formatAgo, splitBalance, toBig } from '@/lib/format';
-import { isStale } from '@/lib/status';
+import { clockTime, coverage, runwayView, totalManaged } from '@/lib/dashboardModel';
+import { formatAgo, formatToken, shortAddress, splitBalance, toBig } from '@/lib/format';
+import { isStale, pillLabel, pillState } from '@/lib/status';
 
-/** bigint -> plain number, for chart Y-axis position ONLY. This is the one place per screen where
- * money crosses into JS `number` (I12 governs money math and comparisons, not a pixel coordinate);
- * the source of truth stays the bigint from `totalManaged`, and this value is never compared,
- * summed, or stored. Safe in practice: treasury balances stay far under Number.MAX_SAFE_INTEGER at
- * 6-decimal micro-USD scale. */
-function microUsdToChartNumber(microUsd: bigint): number {
-  return Number(microUsd) / 1_000_000;
+const ARC_TESTNET = 5042002;
+
+function Label({ children }: { children: ReactNode }) {
+  return <span className="label">{children}</span>;
 }
 
-export function BalanceCard({
+/* --------------------------------------------------------------- status row */
+
+export function LoopStatus({
   d,
   updatedAt,
   now,
@@ -47,65 +53,101 @@ export function BalanceCard({
   now: number;
   onRefresh: () => void;
 }) {
+  const state = pillState(d);
   const stale = isStale(updatedAt, now);
-  const balance = totalManaged(d);
-  const { whole, minor } = splitBalance(balance);
-
-  // Honest flat series: today's real balance repeated, not an invented trend. Thesauros has no
-  // balance-history table (only current vault-position snapshots), so there is no real second
-  // point to plot. A flat line correctly reads as "no observed change" rather than fabricating
-  // movement that was never measured.
-  const point = microUsdToChartNumber(balance);
-  const series: SeriesPoint[] = [
-    { value: point, date: 'Yesterday' },
-    { value: point, date: 'Today' },
-  ];
-  const footer =
-    d.vaultPositions.length > 0
-      ? { delta: `${d.vaultPositions.length}`, deltaLabel: 'position(s) working' }
-      : { delta: '—', deltaLabel: 'nothing earning yet' };
-
+  const label =
+    state === 'active' ? 'Autonomous loop active' : pillLabel(state, d.pendingApprovals);
   return (
-    <div className={d.wallet.frozen ? 'opacity-60' : stale ? 'opacity-70' : ''}>
-      {updatedAt !== undefined ? (
-        <div className="flex items-center justify-end gap-1 pb-2 font-mono text-label text-muted">
-          <span data-testid="as-of">
-            {stale ? 'as of ' : 'updated '}
-            {clockTime(updatedAt)}
-          </span>
-          {stale ? (
-            <button
-              type="button"
-              onClick={onRefresh}
-              aria-label="Refresh now"
-              className="flex size-11 items-center justify-center text-ink"
-            >
-              <IconRefresh className="size-4" />
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-      <Eyebrow className="px-0 pt-0">Total managed</Eyebrow>
-      <ProgressMetricCard
-        title="Treasury"
-        total={`$${whole}${minor}`}
-        delta={footer.delta}
-        deltaLabel={footer.deltaLabel}
-        data={series}
-        size="sm"
-        showStats={false}
-      />
+    <div className="flex items-center justify-between gap-2 pt-3">
+      <StatusPill state={state} label={label} />
+      <button
+        type="button"
+        onClick={onRefresh}
+        aria-label="Refresh now"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-cap font-bold tracking-[0.04em] text-muted uppercase hover:text-ink"
+      >
+        <span data-testid="as-of">
+          {updatedAt === undefined
+            ? 'Loading'
+            : `${stale ? 'As of' : 'Updated'} ${clockTime(updatedAt)}`}
+        </span>
+        <IconRefresh className="size-3.5" />
+      </button>
     </div>
   );
 }
 
-function Circle({
+/* --------------------------------------------------------------- hero card */
+
+export function BalanceCard({ d, explorerBase }: { d: Dashboard; explorerBase: string }) {
+  const balance = totalManaged(d);
+  const { whole, minor } = splitBalance(balance);
+  const vaultTotal = d.vaultPositions.reduce((sum, v) => sum + toBig(v.assets), 0n);
+  const redeemable = d.vaultPositions.reduce((sum, v) => sum + toBig(v.redeemableAssets), 0n);
+  return (
+    <section
+      aria-label="Total managed treasury"
+      data-theme="dark"
+      className={`card p-6 text-ink shadow-lift ${d.wallet.frozen ? 'opacity-70' : ''}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <Label>Total managed</Label>
+        <a
+          href={`${explorerBase}/address/${d.wallet.treasuryAddress}`}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="View the treasury address on the explorer"
+          className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 font-mono text-cap font-semibold whitespace-nowrap text-muted hover:text-ink"
+        >
+          {shortAddress(d.wallet.treasuryAddress)}
+          <IconOutward className="size-3.5" />
+        </a>
+      </div>
+      <p className="flex items-baseline gap-2 pt-2 pb-1">
+        <span className="sr-only">{`${whole}${minor} USDC`}</span>
+        <span
+          aria-hidden="true"
+          className="tabular font-display text-display leading-[48px] font-bold tracking-[-0.03em] text-ink"
+        >
+          ${whole}
+          <span className="text-minor">{minor}</span>
+        </span>
+        <span aria-hidden="true" className="font-display text-section font-semibold text-muted">
+          USDC
+        </span>
+      </p>
+      <div className="flex flex-wrap items-center gap-2 pb-3">
+        <Tag tone="quiet">Max at risk ${formatToken(toBig(d.maxAtRiskMicroUsd))}</Tag>
+        <Tag tone="quiet">
+          {d.vaultPositions.length > 0
+            ? `${d.vaultPositions.length} position${d.vaultPositions.length === 1 ? '' : 's'} earning`
+            : 'Nothing earning yet'}
+        </Tag>
+      </div>
+      <p className="flex items-center gap-2 rounded-sm bg-surface-2 p-2.5 text-meta leading-[18px] text-ink">
+        <IconRadar className="size-[18px] shrink-0" />
+        <span className="min-w-0">
+          Yield engine: <strong className="font-bold">{formatToken(vaultTotal)} USDC</strong>{' '}
+          deployed
+          {vaultTotal > 0n
+            ? ` · ${formatToken(redeemable)} redeemable now`
+            : ' · idle cash above your buffer goes to work'}
+        </span>
+      </p>
+    </section>
+  );
+}
+
+/* --------------------------------------------------------------- action dock */
+
+function Dock({
   icon: Icon,
   label,
   href,
   onClick,
   badge,
   disabled,
+  accent,
 }: {
   icon: IconComponent;
   label: string;
@@ -113,27 +155,35 @@ function Circle({
   onClick?: () => void;
   badge?: number;
   disabled?: boolean;
+  accent?: boolean;
 }) {
   const body = (
     <>
       <span
-        className={`relative flex size-[52px] items-center justify-center rounded-full bg-surface-3 ${disabled ? 'opacity-50' : ''}`}
+        className={`relative flex size-12 items-center justify-center rounded-md transition-transform duration-150 group-hover:scale-105 ${
+          accent ? 'bg-accent text-on-accent' : 'bg-surface-3 text-ink'
+        }`}
       >
-        <Icon className="size-6 text-ink" />
+        <Icon className={accent ? 'size-6' : 'size-[22px]'} />
         {badge ? (
           <span
             aria-label={`${badge} waiting`}
-            className="absolute -top-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-accent text-label font-bold text-on-accent"
+            className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-cap font-bold text-on-accent ring-2 ring-card"
           >
             {badge}
           </span>
         ) : null}
       </span>
-      <span className="text-small font-semibold text-ink">{label}</span>
+      <span
+        className={`text-cap leading-[14px] text-ink ${accent ? 'font-bold' : 'font-semibold'}`}
+      >
+        {label}
+      </span>
     </>
   );
-  const cls =
-    'flex min-h-11 flex-col items-center gap-2 rounded-md py-1 transition-transform duration-150 active:scale-[0.97]';
+  const cls = `group card flex min-h-11 flex-col items-center gap-1.5 p-2 transition-colors hover:bg-surface-2 ${
+    disabled ? 'opacity-45' : 'active:scale-[0.97]'
+  }`;
   if (disabled)
     return (
       <span className={cls} aria-disabled="true">
@@ -161,21 +211,21 @@ export function ActionRow({
   onAddFunds: () => void;
 }) {
   return (
-    <div className="px-4 pt-5">
+    <div>
       <div className="grid grid-cols-4 gap-2">
-        <Circle
+        <Dock
           icon={IconApprovals}
           label="Approvals"
           href="/app/approvals"
           badge={pending}
           disabled={frozen}
         />
-        <Circle icon={IconRecipients} label="Recipients" href="/app/recipients" />
-        <Circle icon={IconActivity} label="Activity" href="/app/activity" />
-        <Circle icon={IconAdd} label="Add funds" onClick={onAddFunds} disabled={frozen} />
+        <Dock icon={IconRecipients} label="Recipients" href="/app/recipients" />
+        <Dock icon={IconLedger} label="Audit log" href="/app/activity" />
+        <Dock icon={IconAdd} label="Fund vault" onClick={onAddFunds} disabled={frozen} accent />
       </div>
       {frozen ? (
-        <p className="pt-3 text-center text-small text-muted">
+        <p className="pt-2 text-center text-meta text-muted">
           Frozen: approvals and funding are paused until you unfreeze.
         </p>
       ) : null}
@@ -183,238 +233,461 @@ export function ActionRow({
   );
 }
 
-export function FundSheet({
-  open,
-  onClose,
-  treasuryAddress,
-  testnet,
-}: {
-  open: boolean;
-  onClose: () => void;
-  treasuryAddress: string;
-  testnet: boolean;
-}) {
-  return (
-    <Sheet open={open} title="Fund your treasury" onClose={onClose}>
-      <p className="max-w-[46ch] pb-4 text-small text-muted">
-        Send USDC to your own treasury address on Arc. Thesauros only ever works from what you put
-        here, inside the limits you signed.
-      </p>
-      <CopyAddress address={treasuryAddress} />
-      {testnet ? (
-        <p className="pt-4 text-small text-muted">
-          This is a testnet.{' '}
-          <a
-            href="https://faucet.circle.com"
-            target="_blank"
-            rel="noreferrer"
-            className="font-semibold text-info hover:underline"
-          >
-            Get free test USDC from the Circle faucet
-          </a>
-          .
-        </p>
-      ) : null}
-    </Sheet>
-  );
-}
+/* --------------------------------------------------------------- bento */
 
-function Stat({ label, children, sub }: { label: string; children: ReactNode; sub?: ReactNode }) {
-  return (
-    <div className="rounded-md bg-surface-2 p-4">
-      <p className="font-mono text-label font-semibold tracking-[0.12em] text-muted uppercase">
-        {label}
-      </p>
-      <p className="pt-2 text-h2 font-bold text-ink">{children}</p>
-      {sub ? <p className="pt-1 text-small text-muted">{sub}</p> : null}
-    </div>
+function StatCard({
+  label,
+  icon: Icon,
+  value,
+  unit,
+  foot,
+  href,
+}: {
+  label: string;
+  icon: IconComponent;
+  value: ReactNode;
+  unit: ReactNode;
+  foot: ReactNode;
+  href?: string;
+}) {
+  const inner = (
+    <>
+      <span className="flex items-center justify-between">
+        <Label>{label}</Label>
+        <Icon className="size-4 text-muted" />
+      </span>
+      <span className="tabular block pt-1 font-display text-stat leading-[34px] font-bold tracking-[-0.02em] text-ink">
+        {value}
+      </span>
+      <span className="block text-meta font-semibold text-muted">{unit}</span>
+      <span className="block pt-4 text-cap leading-4 font-semibold text-muted">{foot}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className="card block p-4 transition-colors hover:bg-surface-2">
+      {inner}
+    </Link>
+  ) : (
+    <div className="card p-4">{inner}</div>
   );
 }
 
 export function StatGrid({ d }: { d: Dashboard }) {
   const r = runwayView(d);
   const vaultTotal = d.vaultPositions.reduce((sum, v) => sum + toBig(v.assets), 0n);
+  const cov = coverage(r.liquid, r.buffer);
   return (
-    <div className="grid grid-cols-2 gap-3 px-4 pt-5">
-      <Stat
-        label="Working in vaults"
-        sub={
-          d.vaultPositions.length > 0 ? `${d.vaultPositions.length} position(s)` : 'No vault yet'
+    <div className="grid grid-cols-2 gap-2">
+      <StatCard
+        label="Working"
+        icon={IconSavings}
+        value={formatToken(vaultTotal)}
+        unit="USDC in vaults"
+        foot={
+          d.vaultPositions.length > 0
+            ? d.vaultPositions.map((v) => v.name).join(', ')
+            : 'No vault position yet'
         }
-      >
-        <Money base={vaultTotal} token={false} />
-        <span className="text-small font-semibold text-muted"> USDC</span>
-      </Stat>
-      <Stat label="Policy" sub={d.policy ? `per-tx / daily caps set` : 'No policy yet'}>
-        {d.policy ? `v${d.policy.version}` : 'None'}
-      </Stat>
-      <div className="col-span-2 rounded-md bg-surface-2 p-4" data-testid="runway">
-        <div className="flex items-center justify-between">
-          <p className="font-mono text-label font-semibold tracking-[0.12em] text-muted uppercase">
-            Liquid runway
-          </p>
-          {r.covered === null ? null : r.covered ? (
-            <VerdictBadge tone="allow" label="Above buffer" />
-          ) : (
-            <VerdictBadge tone="escalate" label="Below buffer" />
-          )}
-        </div>
-        <p className="pt-2 text-h2 font-bold text-ink">
-          <Money base={r.liquid} />
-        </p>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-3" aria-hidden="true">
-          <div className="h-full rounded-full bg-ink" style={{ width: `${r.fillPct}%` }} />
-        </div>
-        <p className="pt-2 text-small text-muted">
-          {r.buffer !== null ? (
+      />
+      <StatCard
+        label="Policy"
+        icon={IconGavel}
+        value={d.policy ? `v${d.policy.version}` : 'None'}
+        unit={d.policy ? 'Active, signed by you' : 'Not signed yet'}
+        foot={
+          d.policy ? (
             <>
-              Thesauros keeps at least <Money base={r.buffer} /> liquid.
+              {formatToken(toBig(d.policy.perTxMicroUsd))} USDC per tx
+              <br />
+              {formatToken(toBig(d.policy.dailyMicroUsd))} USDC daily max
             </>
           ) : (
-            'No runway buffer set yet.'
+            'Sign a policy to start'
+          )
+        }
+        href="/app/policy"
+      />
+
+      <section aria-label="Liquid runway" className="card col-span-2 p-4" data-testid="runway">
+        <div className="flex items-center justify-between gap-2">
+          <Label>Liquid runway buffer</Label>
+          {r.covered === null ? null : r.covered ? (
+            <Tag tone="neutral" dot="accent">
+              Above buffer
+            </Tag>
+          ) : (
+            <Tag tone="warn" dot="deny">
+              Below buffer
+            </Tag>
+          )}
+        </div>
+        <div className="flex items-baseline justify-between gap-2 pt-1.5">
+          <p className="flex items-baseline gap-1.5">
+            <span className="tabular font-display text-headline leading-8 font-bold text-ink">
+              {formatToken(r.liquid)}
+            </span>
+            <span className="text-meta font-semibold text-muted">USDC liquid</span>
+          </p>
+          {cov ? <span className="text-cap font-bold text-ink">{cov} the buffer</span> : null}
+        </div>
+        <div className="relative mt-2 h-2 rounded-full bg-surface-3" aria-hidden="true">
+          <div className="h-full rounded-full bg-accent" style={{ width: `${r.fillPct}%` }} />
+          {r.buffer !== null && r.buffer > 0n ? (
+            <div className="absolute -top-1 -bottom-1 left-1/2 w-0.5 rounded-full bg-ink/40" />
+          ) : null}
+        </div>
+        {r.buffer !== null && r.buffer > 0n ? (
+          <div className="flex justify-between pt-1.5 text-cap text-muted">
+            <span>0</span>
+            <span>Floor {formatToken(r.buffer)}</span>
+            <span>{formatToken(r.buffer * 2n)}</span>
+          </div>
+        ) : null}
+        <p className="pt-2 text-meta leading-[18px] text-muted">
+          {r.buffer !== null && r.buffer > 0n ? (
+            <>
+              Thesauros keeps at least <Money base={r.buffer} /> liquid. The Policy Engine blocks
+              any move that would dip below it.
+            </>
+          ) : (
+            'No runway buffer set yet. Sign a policy to set one.'
           )}
         </p>
-      </div>
-      <div className="col-span-2 rounded-md bg-surface-2 p-4" data-testid="max-at-risk">
-        <p className="font-mono text-label font-semibold tracking-[0.12em] text-muted uppercase">
-          Maximum at risk
-        </p>
-        <p className="pt-2 text-h2 font-bold text-ink">
-          <Money base={toBig(d.maxAtRiskMicroUsd)} usd />
-        </p>
-        <p className="max-w-[46ch] pt-1 text-small text-muted">
-          The most Thesauros could ever reach right now, even if it were fully compromised.
-        </p>
-      </div>
+      </section>
     </div>
   );
 }
 
-export function Positions({ d }: { d: Dashboard }) {
-  const treasury = toBig(d.balances.treasuryUsdc);
+/* --------------------------------------------------------------- agent wallet */
+
+export function AgentWalletCard({ d, explorerBase }: { d: Dashboard; explorerBase: string }) {
+  const [copied, setCopied] = useState(false);
+  const addr = d.wallet.agentWalletAddress;
   const agent = toBig(d.balances.agentUsdc);
+  const copy = async () => {
+    if (!addr) return;
+    try {
+      await navigator.clipboard.writeText(addr);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard can be blocked; the explorer link still shows the full address */
+    }
+  };
   return (
-    <>
-      <Eyebrow>Positions</Eyebrow>
-      {d.vaultPositions.map((v) => (
-        <Row
-          key={v.id}
-          icon={IconVault}
-          title={v.name}
-          sub={`${v.redeemableAssets} redeemable now`}
-          right={<Money base={toBig(v.assets)} usd />}
-        />
-      ))}
-      <Row
-        icon={IconWallet}
-        title="Idle in treasury"
-        sub="Not earning"
-        right={<Money base={treasury} usd />}
-      />
-      {agent > 0n ? (
-        <Row
-          icon={IconShield}
-          title="In the agent wallet"
-          sub="Working balance"
-          right={<Money base={agent} usd />}
-        />
-      ) : null}
-    </>
+    <section aria-label="Agent wallet" className="card flex flex-col gap-3 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8 items-center justify-center rounded-sm bg-surface-3 text-ink">
+            <IconAgent className="size-[18px]" />
+          </span>
+          <span>
+            <span className="label block">Agent wallet</span>
+            <span className="block text-title leading-[22px] font-semibold text-ink">
+              Executes inside your policy
+            </span>
+          </span>
+        </div>
+        <Tag tone="quiet">Circle Wallets</Tag>
+      </div>
+      {addr ? (
+        <div className="flex items-center justify-between gap-2 rounded-sm bg-surface-2 p-2.5">
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="truncate font-mono text-meta font-semibold text-ink">
+              {shortAddress(addr)}
+            </span>
+            <button
+              type="button"
+              onClick={() => void copy()}
+              aria-label={copied ? 'Address copied' : 'Copy agent wallet address'}
+              className="flex size-9 items-center justify-center rounded-sm text-muted hover:bg-surface-3 hover:text-ink"
+            >
+              {copied ? <IconCheck className="size-4" /> : <IconCopy className="size-4" />}
+            </button>
+          </span>
+          <span className="text-right">
+            <span className="block text-cap text-muted">Working balance</span>
+            <span className="tabular block text-small font-bold text-ink">
+              {formatToken(agent)} USDC
+            </span>
+          </span>
+        </div>
+      ) : (
+        <p className="rounded-sm bg-surface-2 p-2.5 text-meta text-muted">
+          No agent wallet yet. Finish setup to create one.
+        </p>
+      )}
+      <div className="flex items-center justify-between gap-2 text-cap text-muted">
+        <span className="flex items-center gap-1.5">
+          <span
+            className={`size-1.5 rounded-full ${agent > 0n ? 'bg-accent' : 'bg-muted'}`}
+            aria-hidden="true"
+          />
+          {agent > 0n ? 'Holds working cash' : 'Clean: nothing idle in the agent wallet'}
+        </span>
+        {addr ? (
+          <a
+            href={`${explorerBase}/address/${addr}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-9 items-center gap-0.5 font-bold text-ink hover:underline"
+          >
+            Explorer <IconExternal className="size-3.5" />
+          </a>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
-export function Recent({ d, now }: { d: Dashboard; now: Date }) {
+/* --------------------------------------------------------------- rules */
+
+function RuleLine({
+  icon: Icon,
+  label,
+  value,
+  strong,
+}: {
+  icon: IconComponent;
+  label: string;
+  value: ReactNode;
+  strong?: boolean;
+}) {
   return (
-    <>
-      <Eyebrow>Recent</Eyebrow>
-      {d.recent.length === 0 ? (
-        <p className="px-4 pb-2 text-small text-muted">
-          Nothing yet. Thesauros checks in every few minutes and writes what it decides here.
-        </p>
-      ) : (
-        d.recent.map((item) => (
-          <DecisionRow
-            key={item.id}
-            item={item}
-            variant="compact"
-            now={now}
-            href={`/app/activity?open=${item.id}`}
-          />
-        ))
-      )}
-      <div className="px-4 pt-2 text-right">
+    <li className="flex items-center justify-between gap-3 py-1.5">
+      <span className="flex items-center gap-2 text-ui text-ink">
+        <Icon className="size-4 shrink-0" />
+        {label}
+      </span>
+      <span
+        className={`rounded-sm bg-card px-2 py-0.5 text-cap leading-4 ${strong ? 'font-bold text-ink' : 'font-semibold text-ink'}`}
+      >
+        {value}
+      </span>
+    </li>
+  );
+}
+
+export function RulesCard({ d, recipients }: { d: Dashboard; recipients: number | null }) {
+  return (
+    <section aria-label="Active policy rules" className="rounded-md bg-surface-3/60 p-4">
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <Label>Active policy rules</Label>
         <Link
-          href="/app/activity"
-          className="inline-flex min-h-11 items-center text-small font-semibold text-accent-ink hover:underline"
+          href="/app/policy"
+          className="inline-flex min-h-9 items-center gap-0.5 text-cap font-bold text-ink hover:underline"
         >
-          View all activity
+          {d.policy ? `Policy v${d.policy.version}` : 'Write a mandate'}
+          <IconChevron className="size-3.5" />
         </Link>
       </div>
-    </>
+      {d.policy ? (
+        <ul>
+          <RuleLine
+            icon={IconPeople}
+            label="Recipient allowlist"
+            value={recipients === null ? 'Exact match' : `Exact match (${recipients})`}
+          />
+          <RuleLine
+            icon={IconGauge}
+            label="Per-payment cap"
+            value={`${formatToken(toBig(d.policy.perTxMicroUsd))} USDC`}
+          />
+          <RuleLine
+            icon={IconShieldCheck}
+            label="Daily limit"
+            value={`${formatToken(toBig(d.policy.dailyMicroUsd))} USDC`}
+          />
+          <RuleLine
+            icon={IconShield}
+            label="Circuit breaker"
+            value={d.wallet.breakerOpen ? 'Tripped' : 'Ready'}
+            strong
+          />
+        </ul>
+      ) : (
+        <p className="pt-1 text-meta text-muted">
+          No signed policy yet, so Thesauros takes no action at all.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/* --------------------------------------------------------------- recent + security */
+
+export function Recent({ d, now }: { d: Dashboard; now: Date }) {
+  return (
+    <section aria-label="Recent decisions">
+      <div className="flex items-center justify-between px-1 pb-2">
+        <Label>Recent decisions</Label>
+        <Link
+          href="/app/activity"
+          className="inline-flex min-h-9 items-center gap-0.5 text-cap font-bold text-ink hover:underline"
+        >
+          View all <IconChevron className="size-3.5" />
+        </Link>
+      </div>
+      <div className="card overflow-hidden">
+        {d.recent.length === 0 ? (
+          <p className="p-4 text-meta text-muted">
+            Nothing yet. Thesauros checks in every few minutes and writes what it decides here.
+          </p>
+        ) : (
+          d.recent.map((item) => (
+            <DecisionRow
+              key={item.id}
+              item={item}
+              variant="compact"
+              now={now}
+              href={`/app/activity/${item.id}`}
+            />
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 
 export function SecurityWidget({ d, now }: { d: Dashboard; now: Date }) {
   const n = d.security.blockedCount;
   return (
-    <>
-      <Eyebrow>Security</Eyebrow>
-      <Row
-        icon={IconShield}
-        title={n === 1 ? '1 action blocked' : `${n} actions blocked`}
-        sub={
-          d.security.lastCheckAt
+    <Link
+      href="/app/activity?filter=DENY"
+      className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-2"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-deny-tint text-deny">
+        <IconShield className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-small font-semibold text-ink">
+          {n === 1 ? '1 action blocked' : `${n} actions blocked`}
+        </span>
+        <span className="block text-meta text-muted">
+          {d.security.lastCheckAt
             ? `Last check ${formatAgo(d.security.lastCheckAt, now)}`
-            : 'No check has run yet'
-        }
-        right={
-          <Link href="/app/activity" className="text-small font-semibold text-accent-ink">
-            See why
-          </Link>
-        }
-      />
-    </>
+            : 'No check has run yet'}
+        </span>
+      </span>
+      {n > 0 ? (
+        <VerdictBadge tone="deny" label="See why" />
+      ) : (
+        <IconChevron className="size-4 text-muted" />
+      )}
+    </Link>
   );
 }
+
+/* --------------------------------------------------------------- fund sheet */
+
+export function FundSheet({
+  open,
+  onClose,
+  onSent,
+  treasuryAddress,
+  testnet,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSent: () => void;
+  treasuryAddress: string;
+  testnet: boolean;
+}) {
+  return (
+    <Sheet open={open} title="Fund your treasury" onClose={onClose}>
+      <p className="max-w-[46ch] pb-4 text-ui leading-5 text-muted">
+        Send USDC to your own treasury address on Arc. Thesauros only ever works from what you put
+        here, inside the limits you signed.
+      </p>
+      <CopyAddress address={treasuryAddress} />
+      {testnet ? (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-surface-2 p-3.5">
+          <p className="min-w-0 text-meta leading-[18px] text-ink">
+            <span className="label block pb-0.5">Environment</span>
+            This is a testnet. <strong className="font-bold">Get free test USDC</strong> from the
+            faucet.
+          </p>
+          <a
+            href="https://faucet.circle.com"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-sm bg-accent px-3.5 text-meta font-bold text-on-accent hover:bg-accent-press"
+          >
+            Circle Faucet <IconOutward className="size-3.5" />
+          </a>
+        </div>
+      ) : null}
+      <div className="pt-5">
+        <Button variant="dark" onClick={onSent}>
+          I&apos;ve sent the funds
+        </Button>
+      </div>
+    </Sheet>
+  );
+}
+
+/* --------------------------------------------------------------- page */
 
 export function DashboardView({
   d,
   updatedAt,
   nowMs,
   onRefresh,
+  explorerBase,
+  recipients,
 }: {
   d: Dashboard;
   updatedAt: number | undefined;
   nowMs: number;
   onRefresh: () => void;
+  explorerBase: string;
+  recipients: number | null;
 }) {
   const [fundOpen, setFundOpen] = useState(false);
   const now = new Date(nowMs);
+  // One column on phones in reading order; two on desktop (money + actions left, rules + log right).
+  // `contents` dissolves each column wrapper below lg so `order-*` can interleave the two.
+  const slot = (i: number, order: string, node: ReactNode) => (
+    <div className={`rise-in min-w-0 ${order} lg:order-none`} style={{ '--i': i } as CSSProperties}>
+      {node}
+    </div>
+  );
   return (
-    <>
-      <div className="px-4 pt-4">
-        <BalanceCard d={d} updatedAt={updatedAt} now={nowMs} onRefresh={onRefresh} />
+    <div className="flex flex-col gap-4 px-4 pb-6 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="contents lg:flex lg:flex-col lg:gap-4">
+        {slot(
+          0,
+          'order-1',
+          <LoopStatus d={d} updatedAt={updatedAt} now={nowMs} onRefresh={onRefresh} />,
+        )}
+        {slot(1, 'order-2', <BalanceCard d={d} explorerBase={explorerBase} />)}
+        {slot(
+          2,
+          'order-3',
+          <ActionRow
+            pending={d.pendingApprovals}
+            frozen={d.wallet.frozen}
+            onAddFunds={() => setFundOpen(true)}
+          />,
+        )}
+        {slot(4, 'order-5', <AgentWalletCard d={d} explorerBase={explorerBase} />)}
+        {slot(7, 'order-8', <SecurityWidget d={d} now={now} />)}
       </div>
-      <ActionRow
-        pending={d.pendingApprovals}
-        frozen={d.wallet.frozen}
-        onAddFunds={() => setFundOpen(true)}
-      />
-      <StatGrid d={d} />
-      <Positions d={d} />
-      <Recent d={d} now={now} />
-      <SecurityWidget d={d} now={now} />
-      <div className="px-4 pt-4 pb-2 text-center">
-        <TextButton onClick={onRefresh}>
-          <IconRefresh className="size-4" /> Refresh
-        </TextButton>
+      <div className="contents lg:flex lg:flex-col lg:gap-4 lg:pt-[72px]">
+        {slot(3, 'order-4', <StatGrid d={d} />)}
+        {slot(5, 'order-6', <RulesCard d={d} recipients={recipients} />)}
+        {slot(6, 'order-7', <Recent d={d} now={now} />)}
       </div>
       <FundSheet
         open={fundOpen}
         onClose={() => setFundOpen(false)}
+        onSent={() => {
+          setFundOpen(false);
+          onRefresh();
+        }}
         treasuryAddress={d.wallet.treasuryAddress}
-        testnet={d.wallet.chainId === 5042002}
+        testnet={d.wallet.chainId === ARC_TESTNET}
       />
-    </>
+    </div>
   );
 }
