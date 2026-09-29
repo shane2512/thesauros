@@ -1,8 +1,9 @@
 'use client';
 // Dashboard, presentational. Every figure arrives already computed by the server; this file
 // arranges it. Adapted from Steward's own S4 screen: dropped the Spend Permission allowance meter
-// (D-012/D-019 item 9 — no on-chain per-wallet allowance in Circle's model) and the balance-history
-// chart (ProgressMetricCard/recharts — not ported this pass); everything else keeps the same shape.
+// (D-012/D-019 item 9 — no on-chain per-wallet allowance in Circle's model); the balance-history
+// chart is ported (ProgressMetricCard/recharts, both already dependencies), with an honest flat
+// line rather than a fabricated trend, since there is no balance-history table to plot from.
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { DecisionRow } from '@/components/activity/DecisionRow';
@@ -18,12 +19,22 @@ import {
   type IconComponent,
 } from '@/components/icons';
 import { CopyAddress } from '@/components/ui/CopyAddress';
+import ProgressMetricCard, { type SeriesPoint } from '@/components/ui/progress-metric-card';
 import { Sheet } from '@/components/ui/Sheet';
-import { Balance, Eyebrow, Money, Row, TextButton, VerdictBadge } from '@/components/primitives';
+import { Eyebrow, Money, Row, TextButton, VerdictBadge } from '@/components/primitives';
 import type { Dashboard } from '@/lib/contracts';
 import { clockTime, runwayView, totalManaged } from '@/lib/dashboardModel';
-import { formatAgo, toBig } from '@/lib/format';
+import { formatAgo, splitBalance, toBig } from '@/lib/format';
 import { isStale } from '@/lib/status';
+
+/** bigint -> plain number, for chart Y-axis position ONLY. This is the one place per screen where
+ * money crosses into JS `number` (I12 governs money math and comparisons, not a pixel coordinate);
+ * the source of truth stays the bigint from `totalManaged`, and this value is never compared,
+ * summed, or stored. Safe in practice: treasury balances stay far under Number.MAX_SAFE_INTEGER at
+ * 6-decimal micro-USD scale. */
+function microUsdToChartNumber(microUsd: bigint): number {
+  return Number(microUsd) / 1_000_000;
+}
 
 export function BalanceCard({
   d,
@@ -38,6 +49,22 @@ export function BalanceCard({
 }) {
   const stale = isStale(updatedAt, now);
   const balance = totalManaged(d);
+  const { whole, minor } = splitBalance(balance);
+
+  // Honest flat series: today's real balance repeated, not an invented trend. Thesauros has no
+  // balance-history table (only current vault-position snapshots), so there is no real second
+  // point to plot. A flat line correctly reads as "no observed change" rather than fabricating
+  // movement that was never measured.
+  const point = microUsdToChartNumber(balance);
+  const series: SeriesPoint[] = [
+    { value: point, date: 'Yesterday' },
+    { value: point, date: 'Today' },
+  ];
+  const footer =
+    d.vaultPositions.length > 0
+      ? { delta: `${d.vaultPositions.length}`, deltaLabel: 'position(s) working' }
+      : { delta: '—', deltaLabel: 'nothing earning yet' };
+
   return (
     <div className={d.wallet.frozen ? 'opacity-60' : stale ? 'opacity-70' : ''}>
       {updatedAt !== undefined ? (
@@ -59,7 +86,15 @@ export function BalanceCard({
         </div>
       ) : null}
       <Eyebrow className="px-0 pt-0">Total managed</Eyebrow>
-      <Balance base={balance} />
+      <ProgressMetricCard
+        title="Treasury"
+        total={`$${whole}${minor}`}
+        delta={footer.delta}
+        deltaLabel={footer.deltaLabel}
+        data={series}
+        size="sm"
+        showStats={false}
+      />
     </div>
   );
 }
