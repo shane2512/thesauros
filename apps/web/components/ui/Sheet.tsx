@@ -31,7 +31,7 @@ export function Sheet({
       >
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-surface-3" aria-hidden="true" />
         <div className="flex items-start justify-between gap-3 pb-2">
-          <h2 id="sheet-title" className="font-display text-section leading-7 font-bold text-ink">
+          <h2 id="sheet-title" className="text-section leading-7 font-bold text-ink">
             {title}
           </h2>
           <button

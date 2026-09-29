@@ -1,23 +1,16 @@
 import type { ReactNode } from 'react';
-import { Geist_Mono, Plus_Jakarta_Sans, Space_Grotesk, UnifrakturCook } from 'next/font/google';
+import { Geist_Mono, Plus_Jakarta_Sans, UnifrakturCook } from 'next/font/google';
 import type { Metadata } from 'next';
 import { Providers } from '@/components/Providers';
 import './globals.css';
 
-// Space Grotesk sets headlines and money, Plus Jakarta Sans everything else, Geist Mono only machine
+// The landing page's own pairing: Plus Jakarta Sans for everything, Geist Mono only for machine
 // data (addresses, hashes, tx ids). UnifrakturCook is the brand's blackletter, used for the
 // wordmark and nothing else — the same mark the landing page carries.
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-jakarta',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['500', '600', '700'],
-  variable: '--font-grotesk',
 });
 
 const blackletter = UnifrakturCook({
@@ -43,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${spaceGrotesk.variable} ${blackletter.variable} ${geistMono.variable}`}
+      className={`${plusJakartaSans.variable} ${blackletter.variable} ${geistMono.variable}`}
     >
       <body className="min-h-dvh bg-ground font-sans text-body text-ink antialiased">
         <a

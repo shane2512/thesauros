@@ -101,7 +101,7 @@ export function NotificationBell() {
             className="glass-sheet pop-in absolute top-16 right-4 max-h-[70dvh] w-[min(92vw,380px)] overflow-y-auto rounded-lg"
           >
             <div className="flex items-center justify-between px-4 py-3">
-              <h2 className="font-display text-lead font-bold text-ink">Notifications</h2>
+              <h2 className="text-lead font-bold text-ink">Notifications</h2>
               <div className="flex items-center gap-2">
                 {unread > 0 ? (
                   <button

@@ -48,7 +48,7 @@ export function ConnectView({ step, onConnect }: { step: ConnectStep; onConnect:
           height={64}
           className="mx-auto size-16"
         />
-        <h1 className="pt-5 text-center font-display text-headline leading-8 font-bold tracking-[-0.02em] text-ink">
+        <h1 className="pt-5 text-center text-headline leading-8 font-bold tracking-[-0.02em] text-ink">
           Connect your wallet
         </h1>
         <p className="mx-auto max-w-[46ch] pt-2 text-center text-ui leading-5 text-muted">

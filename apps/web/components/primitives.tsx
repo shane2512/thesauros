@@ -36,7 +36,7 @@ export function Eyebrow({ children, className = '' }: { children: ReactNode; cla
   return <p className={`label px-4 pt-6 pb-2 ${className}`}>{children}</p>;
 }
 
-/** Page title block: Space Grotesk headline, muted lede. */
+/** Page title block: bold headline, muted lede. */
 export function PageHeading({
   children,
   sub,
@@ -54,9 +54,7 @@ export function PageHeading({
           {kicker}
         </p>
       ) : null}
-      <h1 className="font-display text-headline leading-8 font-bold tracking-[-0.02em] text-ink">
-        {children}
-      </h1>
+      <h1 className="text-headline leading-8 font-bold tracking-[-0.02em] text-ink">{children}</h1>
       {sub ? <p className="max-w-[48ch] pt-1.5 text-ui leading-5 text-muted">{sub}</p> : null}
     </div>
   );
@@ -391,7 +389,7 @@ export function EmptyState({
       <span className="mx-auto flex size-12 items-center justify-center rounded-md bg-accent-soft">
         <span className="h-1.5 w-5 rounded-full bg-accent" aria-hidden="true" />
       </span>
-      <h2 className="pt-4 font-display text-h2 leading-7 font-bold text-ink">{title}</h2>
+      <h2 className="pt-4 text-h2 leading-7 font-bold text-ink">{title}</h2>
       <p className="mx-auto max-w-[42ch] pt-1.5 text-ui leading-5 text-muted">{body}</p>
       {action ? <div className="pt-5">{action}</div> : null}
     </div>

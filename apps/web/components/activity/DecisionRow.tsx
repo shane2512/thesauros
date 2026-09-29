@@ -53,7 +53,7 @@ export function DecisionRow({
   const right = (
     <>
       {item.amount !== null ? (
-        <span className="tabular block font-display text-small font-bold text-ink">
+        <span className="tabular block text-small font-bold text-ink">
           {formatToken(toBig(item.amount))}
         </span>
       ) : (
@@ -116,7 +116,7 @@ export function DecisionCard({ item, now }: { item: DecisionItem; now: Date }) {
         </div>
         {amount !== null ? (
           <div className="shrink-0 text-right">
-            <p className="tabular font-display text-lead leading-6 font-bold text-ink">
+            <p className="tabular text-lead leading-6 font-bold text-ink">
               {sign}
               {formatToken(amount)}
             </p>

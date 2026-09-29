@@ -176,19 +176,17 @@ export function DecisionDetailView({
             </span>
             <span className="min-w-0">
               <span className="label block">{d.decision.trigger} event</span>
-              <span className="block font-display text-h2 leading-6 font-bold text-ink">
-                {d.decision.title}
-              </span>
+              <span className="block text-h2 leading-6 font-bold text-ink">{d.decision.title}</span>
             </span>
           </span>
           {d.verdict ? <VerdictBadge tone={toneOf(d.verdict.decision)} /> : null}
         </div>
         {d.decision.amount !== null ? (
           <p className="flex items-baseline gap-2 pt-4">
-            <span className="tabular font-display text-amount leading-10 font-bold tracking-[-0.02em] text-ink">
+            <span className="tabular text-amount leading-10 font-bold tracking-[-0.02em] text-ink">
               {formatToken(toBig(d.decision.amount))}
             </span>
-            <span className="font-display text-lead font-semibold text-muted">USDC</span>
+            <span className="text-lead font-semibold text-muted">USDC</span>
           </p>
         ) : null}
         <p className="pt-2 text-ui leading-5 text-ink">{d.decision.explanation}</p>
@@ -236,9 +234,7 @@ export function DecisionDetailView({
                   <span className="text-meta text-muted capitalize">
                     {x.holder} · {x.token}
                   </span>
-                  <span className="tabular font-display text-small font-bold text-ink">
-                    {x.delta}
-                  </span>
+                  <span className="tabular text-small font-bold text-ink">{x.delta}</span>
                 </li>
               ))}
             </ul>

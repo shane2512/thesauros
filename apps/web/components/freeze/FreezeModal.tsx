@@ -36,7 +36,7 @@ export function FreezeModal({
               </span>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 id="freeze-title" className="font-display text-h2 font-bold text-ink">
+                  <h2 id="freeze-title" className="text-h2 font-bold text-ink">
                     Freeze Thesauros
                   </h2>
                   <span className="rounded-full bg-deny-fill px-2 py-0.5 font-mono text-micro font-bold tracking-[0.08em] text-on-deny-fill uppercase">

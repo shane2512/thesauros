@@ -4,7 +4,7 @@
    Thesauros design tokens. Cool-grey ground (#f8f9fa), white cards on a hairline shadow, ink
    #191c1d, and one brand yellow (#FCE300) used only for FILLED surfaces — buttons, badges, meter
    fills, the active step — never as text on a light canvas, where yellow is illegible.
-   Space Grotesk carries headlines and money; Plus Jakarta Sans everything else; Geist Mono only
+   Plus Jakarta Sans carries everything, headlines and money included; Geist Mono only
    machine data (addresses, hashes).
 
    Verdict colours (allow/escalate/deny) are the one deliberate exception to "single accent":
@@ -227,7 +227,6 @@
 
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-grotesk), var(--font-jakarta), ui-sans-serif, sans-serif;
   --font-blackletter: var(--font-unifraktur), 'Pirata One', serif;
 
   /* type scale */

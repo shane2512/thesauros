@@ -89,9 +89,7 @@ export function ApprovalSign({
   return (
     <div data-testid="approval-sign">
       {detail.data ? (
-        <p className="font-display text-h2 leading-6 font-bold text-ink">
-          {detail.data.decision.title}
-        </p>
+        <p className="text-h2 leading-6 font-bold text-ink">{detail.data.decision.title}</p>
       ) : null}
       {approval.rationale ? (
         <p className="max-w-[52ch] pt-2 text-small text-muted">{approval.rationale}</p>

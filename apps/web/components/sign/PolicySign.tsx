@@ -119,7 +119,7 @@ export function PolicySign({
             <ol data-testid="policy-sentences" className="divide-y divide-line">
               {p.sentences.map((s, i) => (
                 <li key={s} className="flex items-start gap-3 p-4">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-surface-3 font-display text-ui font-bold text-ink">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-surface-3 text-ui font-bold text-ink">
                     {i + 1}
                   </span>
                   <span className="pt-1 text-ui leading-5 text-ink">{s}</span>

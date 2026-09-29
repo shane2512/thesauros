@@ -369,10 +369,11 @@ freeze/sweep path (I7) is unchanged — the screens call the same functions they
 - **Tokens:** cool-grey ground `#f8f9fa`, white `.card` on a hairline shadow, ink `#191c1d`, brand
   yellow `#FCE300` for filled surfaces only; a named type scale (`text-cap` … `text-display`) instead
   of one-off pixel sizes. Dark mode kept.
-- **Fonts (no new npm dependency — `next/font/google`):** Space Grotesk for headlines and money (from
-  Stitch); UnifrakturCook for the wordmark only, next to the unchanged `brand/logo/thesauros-logo.svg`
-  (copied to `apps/web/public/logo/`), so the app carries the landing page's identity. Four families
-  in total — a deliberate exception, since mono is limited to addresses/hashes.
+- **Fonts (no new npm dependency — `next/font/google`):** the landing page's own pairing kept —
+  Plus Jakarta Sans for everything, Geist Mono for addresses/hashes — plus UnifrakturCook for the
+  wordmark only, next to the unchanged `brand/logo/thesauros-logo.svg` (copied to
+  `apps/web/public/logo/`). Stitch's Space Grotesk was tried and dropped at the owner's call: the
+  existing brand type wins over the imported design's.
 - **Honesty over Stitch's placeholders:** Stitch's invented figures (APY, "$14.2k executed", ERC-4337,
   multisig quorum, "ZK proof", QR code) were not shipped. Every number on screen comes from
   `/api/dashboard`, `/api/decisions` or `/api/policy`; "Verify proof" became the real

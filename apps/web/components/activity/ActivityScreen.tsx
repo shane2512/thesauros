@@ -111,9 +111,7 @@ function Telemetry({ items, pending }: { items: DecisionItem[]; pending: number 
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="label">Treasury telemetry</p>
-          <h1 className="pt-0.5 font-display text-section leading-7 font-bold text-ink">
-            Autonomous activity
-          </h1>
+          <h1 className="pt-0.5 text-section leading-7 font-bold text-ink">Autonomous activity</h1>
         </div>
         <div
           className="flex items-center gap-1 rounded-sm bg-surface-2 p-1"
@@ -141,14 +139,12 @@ function Telemetry({ items, pending }: { items: DecisionItem[]; pending: number 
       <div className="grid grid-cols-3 gap-1.5">
         <div className="rounded-sm bg-surface-2 p-2.5">
           <p className="text-cap font-semibold text-muted">Decisions</p>
-          <p className="tabular pt-1 font-display text-stat-sm leading-7 font-bold text-ink">
-            {items.length}
-          </p>
+          <p className="tabular pt-1 text-stat-sm leading-7 font-bold text-ink">{items.length}</p>
           <p className="text-micro text-muted">loaded below</p>
         </div>
         <div className="rounded-sm bg-surface-2 p-2.5">
           <p className="text-cap font-semibold text-muted">Allowed</p>
-          <p className="tabular truncate pt-1 font-display text-stat-sm leading-7 font-bold text-ink">
+          <p className="tabular truncate pt-1 text-stat-sm leading-7 font-bold text-ink">
             ${formatToken(allowedTotal)}
           </p>
           <p className="text-micro text-muted">{allowed.length} actions</p>
@@ -158,7 +154,7 @@ function Telemetry({ items, pending }: { items: DecisionItem[]; pending: number 
           className="rounded-sm bg-accent-soft p-2.5 transition-colors hover:bg-accent"
         >
           <p className="text-cap font-bold text-ink">Needs you</p>
-          <p className="tabular flex items-baseline gap-1 pt-1 font-display text-stat-sm leading-7 font-bold text-ink">
+          <p className="tabular flex items-baseline gap-1 pt-1 text-stat-sm leading-7 font-bold text-ink">
             {pending}
             {pending > 0 ? (
               <span className="size-1.5 rounded-full bg-deny" aria-hidden="true" />

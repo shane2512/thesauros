@@ -107,12 +107,12 @@ export function BalanceCard({ d, explorerBase }: { d: Dashboard; explorerBase: s
         <span className="sr-only">{`${whole}${minor} USDC`}</span>
         <span
           aria-hidden="true"
-          className="tabular font-display text-display leading-[48px] font-bold tracking-[-0.03em] text-ink"
+          className="tabular text-display leading-[48px] font-bold tracking-[-0.03em] text-ink"
         >
           ${whole}
           <span className="text-minor">{minor}</span>
         </span>
-        <span aria-hidden="true" className="font-display text-section font-semibold text-muted">
+        <span aria-hidden="true" className="text-section font-semibold text-muted">
           USDC
         </span>
       </p>
@@ -256,7 +256,7 @@ function StatCard({
         <Label>{label}</Label>
         <Icon className="size-4 text-muted" />
       </span>
-      <span className="tabular block pt-1 font-display text-stat leading-[34px] font-bold tracking-[-0.02em] text-ink">
+      <span className="tabular block pt-1 text-stat leading-[34px] font-bold tracking-[-0.02em] text-ink">
         {value}
       </span>
       <span className="block text-meta font-semibold text-muted">{unit}</span>
@@ -323,7 +323,7 @@ export function StatGrid({ d }: { d: Dashboard }) {
         </div>
         <div className="flex items-baseline justify-between gap-2 pt-1.5">
           <p className="flex items-baseline gap-1.5">
-            <span className="tabular font-display text-headline leading-8 font-bold text-ink">
+            <span className="tabular text-headline leading-8 font-bold text-ink">
               {formatToken(r.liquid)}
             </span>
             <span className="text-meta font-semibold text-muted">USDC liquid</span>
