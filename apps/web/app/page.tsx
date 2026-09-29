@@ -1,7 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { connectAddress, signMessage } from '@/lib/injectedWallet';
+import { formatWhen, groupAddress, shortAddress, toBig } from '@/lib/format';
+import { banners, pillState } from '@/lib/status';
+import {
+  AllowanceMeter,
+  Banner,
+  Button,
+  Chip,
+  Eyebrow,
+  Money,
+  Row,
+  StatusPill,
+  VerdictBadge,
+  Wordmark,
+  meterTone,
+} from '@/components/primitives';
+import { IconRecipients, IconRevoke, IconShield, IconVault, IconWallet } from '@/components/icons';
 
 type Treasury = {
   wallet: {
@@ -37,10 +53,8 @@ type AuditEntry = {
   createdAt: string;
 };
 
-// DEMO_MODE is read at build/runtime from the server; the client just gets told via /api/treasury's
-// absence of an env leak — simplest is a static banner env var baked in at build time (I11: this UI
-// never claims live data when the server is in demo mode).
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+const WORKER_STALE_MS = 5 * 60 * 1000;
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -51,6 +65,16 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) throw new Error(body.error ?? `${path} failed (${res.status})`);
   return body as T;
 }
+
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section className={`rounded-xl border border-line bg-surface p-6 ${className}`}>
+      {children}
+    </section>
+  );
+}
+
+const RISK_CHIP_TONE = { low: 'neutral', medium: 'warn', high: 'warn' } as const;
 
 export default function Home() {
   const [address, setAddress] = useState<string | null>(null);
@@ -148,272 +172,363 @@ export default function Home() {
       await api(path, { method, body: JSON.stringify({ signature, message }) });
     });
 
+  const workerStale =
+    treasury === null ||
+    treasury.workerHeartbeat === null ||
+    Date.now() - new Date(treasury.workerHeartbeat.createdAt).getTime() > WORKER_STALE_MS;
+
+  const activeBanners = useMemo(
+    () =>
+      treasury
+        ? banners({ demoMode: DEMO_MODE, wallet: treasury.wallet, workerStale })
+        : DEMO_MODE
+          ? banners({ demoMode: true, wallet: undefined, workerStale: false })
+          : [],
+    [treasury, workerStale],
+  );
+
   if (!treasury) {
     return (
-      <main className="mx-auto max-w-lg p-8 text-center">
-        <h1 className="text-3xl font-semibold">Thesauros</h1>
-        <p className="mt-2 text-neutral-400">The treasury that reconciles itself before it pays.</p>
-        {DEMO_MODE && (
-          <div className="mt-4 rounded bg-amber-900/40 px-3 py-1 text-sm text-amber-300">
-            DEMO DATA
-          </div>
-        )}
-        <button
-          onClick={connect}
-          disabled={busy === 'connect'}
-          className="mt-8 rounded bg-emerald-600 px-6 py-3 font-medium hover:bg-emerald-500 disabled:opacity-50"
-        >
-          {busy === 'connect' ? 'Connecting…' : 'Connect wallet'}
-        </button>
-        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+      <main
+        id="main"
+        className="mx-auto flex min-h-dvh max-w-lg flex-col items-center justify-center gap-8 p-8 text-center"
+      >
+        {activeBanners.map((b) => (
+          <Banner key={b.id} tone={b.tone} title={b.title} live={b.live}>
+            {b.body}
+          </Banner>
+        ))}
+        <div>
+          <Wordmark className="text-h1" />
+          <p className="mt-3 text-small text-muted">
+            The treasury that reconciles itself before it pays.
+          </p>
+        </div>
+        <Button onClick={connect} loading={busy === 'connect'} className="w-auto px-10">
+          Connect wallet
+        </Button>
+        {error && <p className="text-small text-deny">{error}</p>}
       </main>
     );
   }
 
   const w = treasury.wallet;
+  const status = pillState({
+    wallet: w,
+    pendingApprovals: treasury.pendingApprovals.length,
+    workerStale,
+  });
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 p-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Thesauros</h1>
-        {DEMO_MODE && (
-          <span className="rounded bg-amber-900/40 px-3 py-1 text-sm text-amber-300">
-            DEMO DATA
-          </span>
-        )}
+    <main id="main" className="mx-auto max-w-2xl pb-16">
+      {activeBanners.map((b) => (
+        <Banner key={b.id} tone={b.tone} title={b.title} live={b.live}>
+          {b.body}
+        </Banner>
+      ))}
+      <header className="flex items-center justify-between px-4 py-6">
+        <Wordmark />
+        <StatusPill state={status} />
       </header>
-      {error && <p className="rounded bg-red-950 px-3 py-2 text-sm text-red-300">{error}</p>}
-
-      <section className="rounded border border-neutral-800 p-4">
-        <h2 className="font-medium">Treasury</h2>
-        <p className="mt-1 text-sm text-neutral-400">Owner: {w.treasuryAddress}</p>
-        <p className="text-sm text-neutral-400">
-          Agent wallet: {w.agentWalletAddress ?? 'not provisioned'}
-          {w.frozen && <span className="ml-2 text-red-400">FROZEN — {w.frozenReason}</span>}
-        </p>
-        {!w.agentWalletAddress && (
-          <button
-            onClick={provisionWallet}
-            disabled={busy === 'provision'}
-            className="mt-3 rounded bg-emerald-600 px-4 py-2 text-sm hover:bg-emerald-500 disabled:opacity-50"
-          >
-            {busy === 'provision' ? 'Provisioning…' : 'Provision Circle wallet'}
-          </button>
-        )}
-        {treasury.balances && (
-          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <div>Treasury USDC: {treasury.balances.treasuryUsdc}</div>
-            <div>Agent USDC: {treasury.balances.agentUsdc}</div>
-          </div>
-        )}
-        {treasury.vaultPositions.map((v) => (
-          <div key={v.id} className="mt-1 text-sm text-neutral-400">
-            {v.name}: {v.assets} USDC ({v.redeemableAssets} redeemable)
-          </div>
-        ))}
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => ownerAction('freeze', '/api/freeze')}
-            className="rounded bg-red-700 px-3 py-1.5 text-sm hover:bg-red-600"
-          >
-            Freeze
-          </button>
-          <button
-            onClick={() => ownerAction('unfreeze', '/api/freeze', 'DELETE')}
-            className="rounded bg-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-600"
-          >
-            Unfreeze
-          </button>
-          <button
-            onClick={() => ownerAction('revoke', '/api/revoke')}
-            className="rounded bg-red-900 px-3 py-1.5 text-sm hover:bg-red-800"
-          >
-            Revoke
-          </button>
-          <button
-            onClick={() => ownerAction('sweep', '/api/sweep')}
-            className="rounded bg-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-600"
-          >
-            Sweep home
-          </button>
+      {error && (
+        <div className="mx-4 mb-4 rounded-md bg-deny-tint px-3 py-2 text-small text-deny">
+          {error}
         </div>
-      </section>
-
-      {treasury.policyVersion === null ? (
-        <section className="rounded border border-neutral-800 p-4">
-          <h2 className="font-medium">Mandate</h2>
-          <p className="mt-1 text-sm text-neutral-400">
-            Write your mandate in plain English. Add recipients/vaults first if it references them
-            by name.
-          </p>
-          <textarea
-            value={mandateText}
-            onChange={(e) => setMandateText(e.target.value)}
-            rows={5}
-            className="mt-3 w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-sm"
-            placeholder="Keep at least 3 months of runway in USDC; deposit the rest into the yield vault; pay Acme Studio $2,000 on the 1st of each month."
-          />
-          <button
-            onClick={compileMandate}
-            disabled={busy === 'mandate' || !mandateText}
-            className="mt-3 rounded bg-emerald-600 px-4 py-2 text-sm hover:bg-emerald-500 disabled:opacity-50"
-          >
-            {busy === 'mandate' ? 'Compiling…' : 'Compile policy'}
-          </button>
-          {mandateOutcome && (
-            <div className="mt-4 space-y-2 text-sm">
-              {mandateOutcome.sentences.map((s, i) => (
-                <p key={i} className="text-neutral-300">
-                  {s}
-                </p>
-              ))}
-              {mandateOutcome.issues.length > 0 && (
-                <div className="rounded bg-amber-950 p-2 text-amber-300">
-                  {mandateOutcome.issues.map((iss, i) => (
-                    <p key={i}>
-                      {iss.code}: {iss.message}
-                    </p>
-                  ))}
-                </div>
-              )}
-              {mandateOutcome.draft !== null && mandateOutcome.issues.length === 0 && (
-                <button
-                  onClick={activatePolicy}
-                  disabled={busy === 'activate'}
-                  className="rounded bg-emerald-600 px-4 py-2 hover:bg-emerald-500 disabled:opacity-50"
-                >
-                  {busy === 'activate' ? 'Activating…' : 'Sign & activate policy'}
-                </button>
-              )}
-            </div>
-          )}
-        </section>
-      ) : (
-        <section className="rounded border border-neutral-800 p-4">
-          <h2 className="font-medium">Policy v{treasury.policyVersion}</h2>
-          <p className="mt-1 text-sm text-neutral-400">
-            Denied proposals so far: {treasury.deniedCount}. Worker last seen:{' '}
-            {treasury.workerHeartbeat?.createdAt ?? 'never'}.
-          </p>
-        </section>
       )}
 
-      <section className="rounded border border-neutral-800 p-4">
-        <h2 className="font-medium">Pending approvals</h2>
-        {treasury.pendingApprovals.length === 0 && (
-          <p className="mt-1 text-sm text-neutral-500">None.</p>
-        )}
-        {treasury.pendingApprovals.map((a) => (
-          <div key={a.id} className="mt-2 rounded bg-neutral-900 p-2 text-sm">
-            <pre className="whitespace-pre-wrap text-neutral-400">{a.message}</pre>
-            <div className="mt-2 flex gap-2">
-              <button
-                onClick={() => decideApproval(a.id, 'approved')}
-                className="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => decideApproval(a.id, 'rejected')}
-                className="rounded bg-red-700 px-3 py-1 hover:bg-red-600"
-              >
-                Reject
-              </button>
+      <div className="space-y-6 px-4">
+        {/* ── Treasury ────────────────────────────────────────────────────────────────────── */}
+        <Card>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <Eyebrow className="px-0 pt-0">Agent wallet balance</Eyebrow>
+              <Money base={toBig(treasury.balances?.agentUsdc)} />
             </div>
+            <IconWallet className="size-8 shrink-0 text-muted" />
           </div>
-        ))}
-      </section>
-
-      <section className="rounded border border-neutral-800 p-4">
-        <h2 className="font-medium">Compliance — recipients</h2>
-        {recipients.length === 0 && (
-          <p className="mt-1 text-sm text-neutral-500">No recipients yet.</p>
-        )}
-        {recipients.map((r) => (
-          <div key={r.id} className="mt-1 flex justify-between text-sm">
-            <span>
-              {r.label} ({r.address.slice(0, 8)}…) — max {r.maxPerTx} µUSD/tx
-            </span>
-            <span
-              className={
-                r.riskTier === 'high'
-                  ? 'text-red-400'
-                  : r.riskTier === 'medium'
-                    ? 'text-amber-400'
-                    : 'text-emerald-400'
-              }
+          <p className="mt-3 font-mono text-mono text-muted">{groupAddress(w.treasuryAddress)}</p>
+          <p className="text-small text-muted">
+            {w.agentWalletAddress
+              ? shortAddress(w.agentWalletAddress)
+              : 'agent wallet not provisioned yet'}
+          </p>
+          {!w.agentWalletAddress && (
+            <Button
+              onClick={provisionWallet}
+              loading={busy === 'provision'}
+              className="mt-4 w-auto px-6"
             >
-              {r.riskTier}
-            </span>
-          </div>
-        ))}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const data = new FormData(form);
-            run('add-recipient', async () => {
-              if (!address) return;
-              const body = {
-                label: String(data.get('label')),
-                address: String(data.get('recipientAddress')),
-                maxPerTxUsdc: String(data.get('maxPerTxUsdc')),
-              };
-              const { message } = await api<{ message: string }>('/api/policy/recipients', {
-                method: 'POST',
-                body: JSON.stringify(body),
-              });
-              const signature = await signMessage(address, message);
-              await api('/api/policy/recipients', {
-                method: 'POST',
-                body: JSON.stringify({ ...body, signature, message }),
-              });
-              form.reset();
-            });
-          }}
-          className="mt-3 flex flex-wrap gap-2 text-sm"
-        >
-          <input
-            name="label"
-            placeholder="Label"
-            required
-            className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1"
-          />
-          <input
-            name="recipientAddress"
-            placeholder="0x…"
-            required
-            className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1"
-          />
-          <input
-            name="maxPerTxUsdc"
-            placeholder="Max per tx (USDC)"
-            required
-            className="w-40 rounded border border-neutral-700 bg-neutral-900 px-2 py-1"
-          />
-          <button
-            type="submit"
-            disabled={busy === 'add-recipient'}
-            className="rounded bg-emerald-600 px-3 py-1 hover:bg-emerald-500 disabled:opacity-50"
-          >
-            Add recipient
-          </button>
-        </form>
-      </section>
-
-      <section className="rounded border border-neutral-800 p-4">
-        <h2 className="font-medium">Audit trail</h2>
-        <div className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm">
-          {audit.map((row) => (
-            <div key={row.id} className="flex justify-between border-b border-neutral-900 py-1">
-              <span>
-                {row.actor} · {row.event} · {row.entityType}
-              </span>
-              <span className="text-neutral-500">{new Date(row.createdAt).toLocaleString()}</span>
+              Provision Circle wallet
+            </Button>
+          )}
+          {treasury.vaultPositions.length > 0 && (
+            <div className="mt-4 divide-y divide-line border-t border-line">
+              {treasury.vaultPositions.map((v) => (
+                <Row
+                  key={v.id}
+                  icon={IconVault}
+                  title={v.name}
+                  sub={
+                    <>
+                      <Money base={toBig(v.redeemableAssets)} /> redeemable now
+                    </>
+                  }
+                  right={<Money base={toBig(v.assets)} />}
+                />
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          )}
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button
+              variant="danger"
+              onClick={() => ownerAction('freeze', '/api/freeze')}
+              loading={busy === 'freeze'}
+              className="w-auto px-5"
+            >
+              Freeze
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => ownerAction('unfreeze', '/api/freeze', 'DELETE')}
+              loading={busy === 'unfreeze'}
+              className="w-auto px-5"
+            >
+              Unfreeze
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => ownerAction('revoke', '/api/revoke')}
+              loading={busy === 'revoke'}
+              className="w-auto px-5"
+            >
+              <IconRevoke className="size-4" /> Revoke
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => ownerAction('sweep', '/api/sweep')}
+              loading={busy === 'sweep'}
+              className="w-auto px-5"
+            >
+              Sweep home
+            </Button>
+          </div>
+        </Card>
+
+        {/* ── Mandate / policy ────────────────────────────────────────────────────────────── */}
+        {treasury.policyVersion === null ? (
+          <Card>
+            <h2 className="text-h2 font-bold text-ink">Mandate</h2>
+            <p className="mt-1 text-small text-muted">
+              Write your mandate in plain English. Add recipients first if it names them.
+            </p>
+            <textarea
+              value={mandateText}
+              onChange={(e) => setMandateText(e.target.value)}
+              rows={5}
+              className="mt-4 w-full rounded-md border border-line-strong bg-ground p-3 text-small text-ink placeholder:text-faint focus-visible:outline-none"
+              placeholder="Keep at least 3 months of runway in USDC; deposit the rest into the yield vault; pay Acme Studio $2,000 on the 1st of each month."
+            />
+            <Button
+              onClick={compileMandate}
+              disabled={!mandateText}
+              loading={busy === 'mandate'}
+              className="mt-4 w-auto px-6"
+            >
+              Compile policy
+            </Button>
+            {mandateOutcome && (
+              <div className="mt-5 space-y-3">
+                {mandateOutcome.sentences.map((s, i) => (
+                  <p key={i} className="text-small text-ink">
+                    {s}
+                  </p>
+                ))}
+                {mandateOutcome.issues.length > 0 && (
+                  <div className="space-y-2">
+                    {mandateOutcome.issues.map((iss, i) => (
+                      <Chip key={i} tone="warn">
+                        {iss.code}: {iss.message}
+                      </Chip>
+                    ))}
+                  </div>
+                )}
+                {mandateOutcome.draft !== null && mandateOutcome.issues.length === 0 && (
+                  <Button
+                    onClick={activatePolicy}
+                    loading={busy === 'activate'}
+                    className="w-auto px-6"
+                  >
+                    Sign &amp; activate policy
+                  </Button>
+                )}
+              </div>
+            )}
+          </Card>
+        ) : (
+          <Card>
+            <div className="flex items-center justify-between">
+              <h2 className="text-h2 font-bold text-ink">Policy v{treasury.policyVersion}</h2>
+              <IconShield className="size-6 text-muted" />
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <VerdictBadge tone="deny" label={`${treasury.deniedCount} denied`} />
+            </div>
+            <p className="mt-2 text-small text-muted">
+              Worker last seen:{' '}
+              {treasury.workerHeartbeat ? formatWhen(treasury.workerHeartbeat.createdAt) : 'never'}
+            </p>
+          </Card>
+        )}
+
+        {/* ── Approvals ───────────────────────────────────────────────────────────────────── */}
+        <Card>
+          <h2 className="text-h2 font-bold text-ink">Pending approvals</h2>
+          {treasury.pendingApprovals.length === 0 ? (
+            <p className="mt-2 text-small text-muted">None right now.</p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {treasury.pendingApprovals.map((a) => (
+                <div key={a.id} className="rounded-md bg-surface-2 p-4">
+                  <VerdictBadge tone="escalate" />
+                  <pre className="mt-2 whitespace-pre-wrap font-mono text-mono text-muted">
+                    {a.message}
+                  </pre>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      onClick={() => decideApproval(a.id, 'approved')}
+                      loading={busy === `approval-${a.id}` && busy !== null}
+                      className="h-11 w-auto px-5 text-small"
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => decideApproval(a.id, 'rejected')}
+                      className="h-11 w-auto px-5 text-small"
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* ── Compliance / recipients ─────────────────────────────────────────────────────── */}
+        <Card>
+          <div className="flex items-center gap-2">
+            <IconRecipients className="size-5 text-muted" />
+            <h2 className="text-h2 font-bold text-ink">Recipients &amp; compliance</h2>
+          </div>
+          {recipients.length === 0 ? (
+            <p className="mt-2 text-small text-muted">No recipients yet.</p>
+          ) : (
+            <div className="mt-3 divide-y divide-line">
+              {recipients.map((r) => {
+                const cap = toBig(r.maxPerTx);
+                return (
+                  <div key={r.id} className="py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-h3 font-semibold text-ink">{r.label}</p>
+                        <p className="truncate font-mono text-mono text-muted">
+                          {shortAddress(r.address)}
+                        </p>
+                      </div>
+                      <Chip tone={RISK_CHIP_TONE[r.riskTier]}>{r.riskTier} risk</Chip>
+                    </div>
+                    <div className="mt-2">
+                      <AllowanceMeter
+                        usedPct={0}
+                        capPct={100}
+                        tone={meterTone(0n, cap)}
+                        caption={
+                          <>
+                            Cap <Money base={cap} /> per payment
+                          </>
+                        }
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const data = new FormData(form);
+              run('add-recipient', async () => {
+                if (!address) return;
+                const body = {
+                  label: String(data.get('label')),
+                  address: String(data.get('recipientAddress')),
+                  maxPerTxUsdc: String(data.get('maxPerTxUsdc')),
+                };
+                const { message } = await api<{ message: string }>('/api/policy/recipients', {
+                  method: 'POST',
+                  body: JSON.stringify(body),
+                });
+                const signature = await signMessage(address, message);
+                await api('/api/policy/recipients', {
+                  method: 'POST',
+                  body: JSON.stringify({ ...body, signature, message }),
+                });
+                form.reset();
+              });
+            }}
+            className="mt-4 flex flex-wrap gap-2"
+          >
+            <input
+              name="label"
+              placeholder="Label"
+              required
+              className="min-h-11 rounded-full border border-line-strong bg-ground px-4 text-small text-ink placeholder:text-faint focus-visible:outline-none"
+            />
+            <input
+              name="recipientAddress"
+              placeholder="0x…"
+              required
+              className="min-h-11 min-w-0 flex-1 rounded-full border border-line-strong bg-ground px-4 font-mono text-mono text-ink placeholder:text-faint focus-visible:outline-none"
+            />
+            <input
+              name="maxPerTxUsdc"
+              placeholder="Max per tx (USDC)"
+              required
+              className="min-h-11 w-44 rounded-full border border-line-strong bg-ground px-4 text-small text-ink placeholder:text-faint focus-visible:outline-none"
+            />
+            <Button
+              type="submit"
+              loading={busy === 'add-recipient'}
+              className="h-11 w-auto px-6 text-small"
+            >
+              Add recipient
+            </Button>
+          </form>
+        </Card>
+
+        {/* ── Audit trail ─────────────────────────────────────────────────────────────────── */}
+        <Card>
+          <h2 className="text-h2 font-bold text-ink">Audit trail</h2>
+          <div className="mt-2 max-h-72 divide-y divide-line overflow-y-auto">
+            {audit.length === 0 && (
+              <p className="py-3 text-small text-muted">Nothing recorded yet.</p>
+            )}
+            {audit.map((row) => (
+              <div key={row.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="text-small text-ink">
+                  <span className="text-muted">{row.actor}</span> · {row.event}
+                </span>
+                <span className="shrink-0 font-mono text-mono text-muted">
+                  {formatWhen(row.createdAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
     </main>
   );
 }

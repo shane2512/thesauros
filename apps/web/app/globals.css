@@ -1,1 +1,402 @@
 @import 'tailwindcss';
+
+/* ===========================================================================
+   Thesauros design tokens: black + white + one yellow accent (#FCE300),
+   Plus Jakarta Sans body font. Neutrals stay black/white; yellow is used only
+   for FILLED interactive surfaces (buttons, badges, the meter fill, active-tab
+   indicators) — never as text color on the white canvas, because yellow-on-white
+   text is illegible. Text links use black in light mode for the same reason,
+   yellow in dark mode where it reads.
+
+   Verdict colours (allow/escalate/deny) are the one deliberate exception to
+   "single accent": they are a safety signal, not brand chrome. They stay,
+   always with an icon and a word, never colour alone — removing them would
+   blunt the live "Denied" moment the security demo depends on.
+   =========================================================================== */
+
+/* --- light, the default --- */
+:root {
+  --th-ground: #ffffff;
+  --th-surface: #e8e8ea;
+  --th-surface-2: #dddde1;
+  --th-surface-3: #d0d0d5;
+  --th-line: rgb(0 0 0 / 0.1);
+  --th-line-strong: rgb(0 0 0 / 0.2);
+  --th-ink: #0a0a0a;
+  --th-muted: rgb(60 60 67 / 0.6);
+  --th-faint: rgb(60 60 67 / 0.3);
+  --th-minor: rgb(60 60 67 / 0.18);
+  --th-escalate-tint: #fdf0dc;
+  --th-deny-tint: #fdeae7;
+
+  --th-accent: #fce300;
+  --th-accent-press: #e5ce00;
+  --th-on-accent: #0a0a0a;
+  --th-accent-ink: #0a0a0a;
+
+  --th-allow: #067a59;
+  --th-escalate: #8a5300;
+  --th-deny: #c42a1b;
+  --th-deny-fill: #c42a1b;
+  --th-on-deny-fill: #ffffff;
+  --th-info: #0a0a0a;
+
+  --th-shadow-e1: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.04);
+  --th-shadow-e2: 0 -8px 32px -8px rgb(0 0 0 / 0.14);
+  --th-glass-mix: 78%;
+  --th-glass-edge: rgb(255 255 255 / 0.6);
+  color-scheme: light;
+}
+
+/* --- dark, the alternate --- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --th-ground: #000000;
+    --th-surface: #1c1c1e;
+    --th-surface-2: #2c2c2e;
+    --th-surface-3: #3a3a3c;
+    --th-line: rgb(255 255 255 / 0.15);
+    --th-line-strong: rgb(255 255 255 / 0.28);
+    --th-ink: #ffffff;
+    --th-muted: rgb(235 235 245 / 0.6);
+    --th-faint: rgb(235 235 245 / 0.3);
+    --th-minor: rgb(235 235 245 / 0.18);
+    --th-escalate-tint: #33260c;
+    --th-deny-tint: #2e1210;
+
+    --th-accent: #fce300;
+    --th-accent-press: #e5ce00;
+    --th-on-accent: #0a0a0a;
+    /* intentional asymmetry: yellow text is legible on black, illegal on white */
+    --th-accent-ink: #fce300;
+
+    --th-allow: #2fd9a6;
+    --th-escalate: #ffb020;
+    --th-deny: #ff6a5e;
+    --th-deny-fill: #d92d1e;
+    --th-on-deny-fill: #ffffff;
+    --th-info: #fce300;
+
+    --th-shadow-e1: 0 0 0 0 transparent;
+    --th-shadow-e2: 0 -24px 48px -12px rgb(0 0 0 / 0.55);
+    --th-glass-mix: 68%;
+    --th-glass-edge: rgb(255 255 255 / 0.08);
+    color-scheme: dark;
+  }
+}
+
+/* explicit override, on <html> or on any subtree */
+[data-theme='light'] {
+  --th-ground: #ffffff;
+  --th-surface: #e8e8ea;
+  --th-surface-2: #dddde1;
+  --th-surface-3: #d0d0d5;
+  --th-line: rgb(0 0 0 / 0.1);
+  --th-line-strong: rgb(0 0 0 / 0.2);
+  --th-ink: #0a0a0a;
+  --th-muted: rgb(60 60 67 / 0.6);
+  --th-faint: rgb(60 60 67 / 0.3);
+  --th-minor: rgb(60 60 67 / 0.18);
+  --th-escalate-tint: #fdf0dc;
+  --th-deny-tint: #fdeae7;
+
+  --th-accent: #fce300;
+  --th-accent-press: #e5ce00;
+  --th-on-accent: #0a0a0a;
+  --th-accent-ink: #0a0a0a;
+
+  --th-allow: #067a59;
+  --th-escalate: #8a5300;
+  --th-deny: #c42a1b;
+  --th-deny-fill: #c42a1b;
+  --th-on-deny-fill: #ffffff;
+  --th-info: #0a0a0a;
+
+  --th-shadow-e1: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.04);
+  --th-shadow-e2: 0 -8px 32px -8px rgb(0 0 0 / 0.14);
+  --th-glass-mix: 78%;
+  --th-glass-edge: rgb(255 255 255 / 0.6);
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --th-ground: #000000;
+  --th-surface: #1c1c1e;
+  --th-surface-2: #2c2c2e;
+  --th-surface-3: #3a3a3c;
+  --th-line: rgb(255 255 255 / 0.15);
+  --th-line-strong: rgb(255 255 255 / 0.28);
+  --th-ink: #ffffff;
+  --th-muted: rgb(235 235 245 / 0.6);
+  --th-faint: rgb(235 235 245 / 0.3);
+  --th-minor: rgb(235 235 245 / 0.18);
+  --th-escalate-tint: #33260c;
+  --th-deny-tint: #2e1210;
+
+  --th-accent: #fce300;
+  --th-accent-press: #e5ce00;
+  --th-on-accent: #0a0a0a;
+  --th-accent-ink: #fce300;
+
+  --th-allow: #2fd9a6;
+  --th-escalate: #ffb020;
+  --th-deny: #ff6a5e;
+  --th-deny-fill: #d92d1e;
+  --th-on-deny-fill: #ffffff;
+  --th-info: #fce300;
+
+  --th-shadow-e1: 0 0 0 0 transparent;
+  --th-shadow-e2: 0 -24px 48px -12px rgb(0 0 0 / 0.55);
+  --th-glass-mix: 68%;
+  --th-glass-edge: rgb(255 255 255 / 0.08);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-ground: var(--th-ground);
+  --color-surface: var(--th-surface);
+  --color-surface-2: var(--th-surface-2);
+  --color-surface-3: var(--th-surface-3);
+  --color-line: var(--th-line);
+  --color-line-strong: var(--th-line-strong);
+  --color-ink: var(--th-ink);
+  --color-muted: var(--th-muted);
+  --color-faint: var(--th-faint);
+  --color-minor: var(--th-minor);
+  --color-escalate-tint: var(--th-escalate-tint);
+  --color-deny-tint: var(--th-deny-tint);
+
+  --color-accent: var(--th-accent);
+  --color-accent-press: var(--th-accent-press);
+  --color-accent-ink: var(--th-accent-ink);
+  --color-on-accent: var(--th-on-accent);
+
+  --color-allow: var(--th-allow);
+  --color-escalate: var(--th-escalate);
+  --color-deny: var(--th-deny);
+  --color-deny-fill: var(--th-deny-fill);
+  --color-on-deny-fill: var(--th-on-deny-fill);
+  --color-info: var(--th-info);
+
+  --color-background: var(--th-ground);
+  --color-foreground: var(--th-ink);
+  --color-card: var(--th-surface);
+  --color-card-foreground: var(--th-ink);
+  --color-popover: var(--th-surface);
+  --color-popover-foreground: var(--th-ink);
+  --color-primary: var(--th-accent);
+  --color-primary-foreground: var(--th-on-accent);
+  --color-secondary: var(--th-surface-2);
+  --color-secondary-foreground: var(--th-ink);
+  --color-muted-foreground: var(--th-muted);
+  --color-accent-foreground: var(--th-on-accent);
+  --color-destructive: var(--th-deny-fill);
+  --color-destructive-foreground: var(--th-on-deny-fill);
+  --color-border: var(--th-line);
+  --color-input: var(--th-line-strong);
+  /* accent-ink, not accent: a yellow ring is illegible on the white canvas */
+  --color-ring: var(--th-accent-ink);
+  --color-success: var(--th-allow);
+  --color-warning: var(--th-escalate);
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* type scale */
+  --text-label: 0.6875rem; /* 11px */
+  --text-label--line-height: 1.4;
+  --text-mono: 0.8125rem; /* 13px */
+  --text-mono--line-height: 1.6;
+  --text-small: 0.9375rem; /* 15px */
+  --text-small--line-height: 1.5;
+  --text-body: 1rem;
+  --text-body--line-height: 1.55;
+  --text-h3: 1.0625rem; /* 17px */
+  --text-h3--line-height: 1.35;
+  --text-h2: 1.25rem; /* 20px */
+  --text-h2--line-height: 1.3;
+  --text-h1: 1.75rem; /* 28px */
+  --text-h1--line-height: 1.15;
+  --text-balance: 2.75rem; /* 44px */
+  --text-balance--line-height: 1;
+  --text-balance-lg: 3.25rem; /* 52px */
+  --text-balance-lg--line-height: 1;
+
+  /* radii — pill-first */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
+  --radius-xl: 28px;
+
+  --shadow-e1: var(--th-shadow-e1);
+  --shadow-e2: var(--th-shadow-e2);
+
+  --ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+@layer base {
+  body {
+    background-color: var(--th-ground);
+    color: var(--th-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--th-accent-ink);
+    outline-offset: 2px;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  .glass {
+    background-color: var(--th-surface);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    .glass {
+      background-color: color-mix(in srgb, var(--th-surface) var(--th-glass-mix), transparent);
+      backdrop-filter: blur(24px) saturate(180%);
+      box-shadow: inset 0 1px 0 var(--th-glass-edge);
+    }
+    .glass-sheet {
+      background-color: color-mix(
+        in srgb,
+        var(--th-surface) calc(var(--th-glass-mix) + 4%),
+        transparent
+      );
+      backdrop-filter: blur(32px) saturate(180%);
+      box-shadow:
+        inset 0 1px 0 var(--th-glass-edge),
+        var(--th-shadow-e2);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+    .glass,
+    .glass-sheet {
+      background-color: var(--th-surface);
+      backdrop-filter: none;
+    }
+  }
+
+  .scrim {
+    background-color: color-mix(in srgb, var(--th-ground) 72%, transparent);
+  }
+
+  .row-press {
+    border-radius: var(--radius-md);
+    background-color: var(--th-surface-3);
+  }
+
+  /* the limit line, the one device */
+  .meter-track {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background-color: var(--th-surface-3);
+    overflow: visible;
+  }
+  .meter-fill {
+    height: 100%;
+    border-radius: 999px;
+    background-color: var(--th-accent);
+  }
+  /* the ground the agent may never reach: recessed, past the limit line */
+  .meter-beyond {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 0 999px 999px 0;
+    background-color: var(--th-ground);
+  }
+  /* the wall at the edge of what the agent may touch; never clipped by the track */
+  .limit-line {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    border-radius: 1px;
+    background-color: var(--th-ink);
+    transform: translateX(-1px);
+  }
+
+  /* the wordmark's rule: the fence that stops short of the end */
+  .wordmark-rule {
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 62%;
+    height: 2px;
+    border-radius: 1px;
+    background-color: var(--th-accent);
+  }
+}
+
+/* the single ambient motion, and only while the agent is running */
+@keyframes th-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.breathe {
+  animation: th-breathe 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* the top-of-page loading bar */
+@keyframes th-loadbar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+.loadbar > span {
+  animation: th-loadbar 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* skeletons shaped like the row they replace */
+@keyframes th-shimmer {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.skeleton {
+  background-color: var(--th-surface-3);
+  border-radius: var(--radius-sm);
+  animation: th-shimmer 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .breathe,
+  .skeleton,
+  .loadbar > span {
+    animation: none;
+    opacity: 1;
+  }
+}

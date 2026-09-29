@@ -7,7 +7,7 @@ import {
   listApprovals,
   listVaultRows,
 } from '@thesauros/db';
-import { formatUnits, getEnv, USDC_DECIMALS } from '@thesauros/shared';
+import { getEnv } from '@thesauros/shared';
 import { getBalances, getVaultPosition, publicClientFor } from '@thesauros/wallet';
 import { requireWallet } from '@/lib/requireWallet';
 import { db } from '@/lib/db';
@@ -39,9 +39,12 @@ export async function GET(): Promise<NextResponse> {
       agentWalletAddress,
     });
     if (bal.ok) {
+      // Base units as decimal-digit strings (I12) — the UI's Money/Balance components format
+      // these, never the API (a pre-formatted decimal string can't be round-tripped through
+      // bigint math for e.g. the allowance meter's percentage-of-cap width).
       balances = {
-        treasuryUsdc: formatUnits(bal.value.treasuryUsdc, USDC_DECIMALS),
-        agentUsdc: formatUnits(bal.value.agentUsdc, USDC_DECIMALS),
+        treasuryUsdc: bal.value.treasuryUsdc.toString(),
+        agentUsdc: bal.value.agentUsdc.toString(),
       };
     }
     const positions = await Promise.all(
@@ -54,8 +57,8 @@ export async function GET(): Promise<NextResponse> {
         return {
           id: v.id,
           name: v.name,
-          assets: formatUnits(pos.value.assets, USDC_DECIMALS),
-          redeemableAssets: formatUnits(pos.value.redeemableAssets, USDC_DECIMALS),
+          assets: pos.value.assets.toString(),
+          redeemableAssets: pos.value.redeemableAssets.toString(),
         };
       }),
     );

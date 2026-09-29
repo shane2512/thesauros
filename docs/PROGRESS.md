@@ -358,6 +358,59 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-020 — Ported Steward's visual design system (tokens/primitives only, not branding/routes)
+
+The human asked for Thesauros's UI to visually match Steward's exactly. Asked the peer session
+(D-019's checklist author) for the actual implementation rather than guessing; it pointed at
+`D:\STEWARD`'s untouched original files (`.tastemaker/style-lock.md`, `app/globals.css`,
+`components/ui/primitives.tsx`, `lib/format.ts`, `lib/status.ts`, `components/icons.tsx`), which
+this session's filesystem could read directly.
+
+What was ported, verbatim in substance:
+
+- `apps/web/app/globals.css` — the full token contract (color roles, dark/light palettes, the
+  yellow-never-as-text-on-white rule, verdict colors as the one deliberate exception, type scale,
+  radii, shadows, motion tokens) and every `@layer` rule (glass, meter/limit-line, wordmark-rule,
+  breathe/loadbar/skeleton keyframes, `prefers-reduced-motion` handling). Every value, rule and
+  comment carried over exactly; only the CSS custom-property prefix changed (`--st-*` → `--th-*`)
+  so Thesauros's own source doesn't literally name its tokens after the old project.
+- `apps/web/app/layout.tsx` — same Plus Jakarta Sans / Geist Mono font pairing and skip-link.
+- `apps/web/components/{icons,primitives}.tsx`, `apps/web/lib/{format,status,utils}.ts` — the
+  actual component/helper source (Money, Balance, VerdictBadge, Button, Row, StatusPill,
+  AllowanceMeter, Banner, EmptyState, etc., plus the money/date formatters and the icon set).
+  `status.ts` was adapted (not copied) to Thesauros's real `/api/treasury` response shape rather
+  than Steward's `Dashboard` contract type, since that type doesn't exist here.
+- `apps/web/app/page.tsx` restyled end-to-end with these primitives: the dashboard, mandate
+  composer, policy card, approvals, recipients/compliance (now showing the `AllowanceMeter`
+  device against each recipient's cap, using the real `riskTier` field neither Steward nor the
+  peer's checklist had), and audit trail all use the real tokens, radii, verdict-badge rule, and
+  money formatting instead of the ad-hoc dark-neutral Tailwind classes from D-017's first pass.
+
+What was deliberately NOT ported, per CLAUDE.md's explicit rule against reintroducing the prior
+prototype's branding: the "Steward" name/wordmark text (now "Thesauros"), Steward-specific copy,
+and Steward's multi-route IA (`/connect`, `/onboarding`, `/app/policy`, `/app/approvals`,
+`/app/activity`, `/app/recipients`, `/app/settings/close`) — D-017's single-page architecture is
+kept, restyled rather than restructured, per the human's own scoping answer ("same owner-facing
+behavior/UX," not a literal route-for-route rebuild). The I11 "DEMO DATA" banner — which
+CLAUDE.md requires and which Steward's own team had removed by explicit owner request on their
+project (D-115 there) — was kept, using the same `Banner` component and the same visual treatment
+Steward uses for its other banners, just not the same one Steward chose to keep.
+
+Verified: `pnpm typecheck`/`lint`/`test`/`check:arch`/`build` all green; the landing screen was
+visually confirmed in the browser pane against the token system (yellow pill button, wordmark
+rule, mono-uppercase banner label, dark canvas) before committing. The signed-in dashboard's
+styling was verified by code review and successful build/typecheck rather than a live screenshot
+(no in-session way to complete an injected-wallet sign-in against a headless browser without a
+real extension) — worth a manual click-through before the actual demo.
+
+A caveat found while wiring this in: `/api/treasury` had been returning pre-formatted decimal
+strings (`formatUnits(...)`, e.g. `"1234.56"`) rather than raw base units, which the ported
+`Money`/`Balance`/`AllowanceMeter` components need as bigint-parseable integer strings (I12) — the
+first draft of the restyle actually mangled this (`"1234.56".replace('.', '')` → garbage). Fixed
+by having `/api/treasury` return raw base units and letting the UI format them, which is also the
+more correct convention per I12 (money crosses the API boundary as untouched base-unit digits;
+formatting happens once, at the last step, in the UI) — this bug never reached a commit.
+
 ### D-019 — Cross-session audit checklist (Steward/Base owner-flow bugs): pass/fail against Thesauros
 
 A peer session working on the discarded prior prototype (Steward, Base/Coinbase AgentKit) sent an
