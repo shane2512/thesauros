@@ -47,8 +47,13 @@ export async function POST(req: Request): Promise<NextResponse> {
   const activePolicy = await getActivePolicyBody(database, auth.wallet.id);
   const receiptKey = new TextEncoder().encode(env.RECEIPT_HMAC_SECRET.reveal());
 
+  // Always 200: the HTTP status reflects whether the REQUEST was understood and the signature
+  // verified, not the sweep's own outcome. A denied/failed sweep is business-logic data the client
+  // already models with zSweepResult's `status` field (FreezeFlow branches on it) — returning it
+  // with a non-2xx status made apiPost's generic error handling throw before the client ever saw
+  // `outcome`, since {status, reasons} doesn't match zApiError's {error:{code,message}} shape. That
+  // turned every denied/failed sweep into the generic "server answered 409" banner, discarding the
+  // real reasons FreezeFlow was already built to show.
   const outcome = await runOwnerSweep(database, env, auth.wallet, activePolicy, receiptKey);
-  if (outcome.status === 'executed') return NextResponse.json(outcome);
-  if (outcome.status === 'denied') return NextResponse.json(outcome, { status: 409 });
-  return NextResponse.json(outcome, { status: 500 });
+  return NextResponse.json(outcome);
 }
