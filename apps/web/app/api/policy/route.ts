@@ -7,7 +7,8 @@ import {
   getLatestMandate,
   latestPolicyVersion,
 } from '@thesauros/db';
-import { hashCanonical, policyActivationMessage } from '@thesauros/shared';
+import { hashCanonical, policyActivationMessage, type PolicyDraft } from '@thesauros/shared';
+import { renderPolicyAsSentences } from '@thesauros/policy';
 import { requireWallet } from '@/lib/requireWallet';
 import { issuePending, consumePending } from '@/lib/nonce';
 import { getSession } from '@/lib/session';
@@ -37,6 +38,7 @@ export async function GET(): Promise<NextResponse> {
     version: nextVersion,
     bodyHash,
     message,
+    sentences: renderPolicyAsSentences(mandate.compiledDraft as PolicyDraft),
   });
 }
 
