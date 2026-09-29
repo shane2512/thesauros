@@ -358,6 +358,36 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-022 — Simulation transport switched from `eth_simulateV1` to `Multicall3From` (Arc's RPC doesn't support it)
+
+Found live while testing an owner-initiated sweep: it was denied with
+`MethodNotFoundRpcError: The method "eth_simulateV1" does not exist`. PHASES 5.1's original choice
+(recorded as D-40) had only been checked against Base Sepolia and anvil — never against Arc's real
+RPC — and Arc Docs MCP's own "Supported methods" table for `/arc/references/rpc-endpoints` confirms
+`eth_simulateV1` isn't one of them (see `docs/VERIFY.md` row 14).
+
+`packages/risk/src/simulate.ts` now batches the same pre-balance/body/post-balance call sequence
+through Arc's predeployed `Multicall3From` contract (`0x522fAf9A91c41c443c66765030741e4AaCe147D0`)
+via a single `eth_call` to its `aggregate3(...)` entry point, instead of `viem`'s `simulateCalls`.
+`Multicall3From`'s `CallFrom` precompile preserves the agent wallet as `msg.sender` for every
+subcall, which is what gives the same property `eth_simulateV1` was chosen for — state carry-over
+within one call frame (`approve` then `deposit` sees the allowance) — without ever broadcasting
+anything. Verified live against the real Arc testnet RPC before shipping: a `balanceOf` /
+`balanceOf` / `transfer` / `balanceOf` / `balanceOf` `aggregate3` batch decoded correctly and
+produced accurate before/after deltas.
+
+No security property changed: deltas are still measured from real EVM execution (never inferred
+from the proposal's own claims), an `eth_call` the RPC can't answer still returns `Err` and R11
+still DENYs (I5, fail closed) — only the RPC method changed. `allowFailure: true` per call means one
+subcall reverting doesn't unwind an earlier one's effects, which now also matches how the real
+executor works: `@thesauros/wallet`'s `circleTxSender` sends each call as its own separate
+Circle-signed transaction (Circle wallets have no native call-batching on Arc today), not one atomic
+multi-call — so simulating via one atomic `aggregate3` and executing via N separate transactions
+have the same failure granularity at the balance-delta level that R11 actually checks. Per-call gas
+figures (`Multicall3From`'s `Result` has no gas field, unlike `eth_simulateV1`'s results) are no
+longer measured — recorded as `0n` on the `simulations` row. Nothing reads that field for a policy
+decision, so this is a loss of an audit nicety, not a safety regression.
+
 ### D-021 — Full route-for-route port of Steward's UI (superseding D-020's single-page scope)
 
 The human tested D-020's single-page restyle and said it still didn't look or flow like Steward's

@@ -1,21 +1,28 @@
 // 5.1 — RiskGate simulation (SECURITY §3 Layer 4).
 //
-// APPROACH (documented choice, PHASES 5.1): **`eth_simulateV1`** via viem's `simulateCalls`.
-// Both endpoints we target answer it — the public Base Sepolia RPC and anvil 1.5 (checked
-// 2026-09-21, see PROGRESS D-40) — and it is the only option that gives *state carry-over across
-// several calls in one block*, which every Thesauros action needs (`approve` then `deposit`,
-// `redeem` then `transfer`). Sequential `eth_call` cannot do that: each call starts from the same
-// pre-state, so the deposit would see no allowance. An anvil fork could, but it would need a
-// forked node per simulation in production.
+// APPROACH (D-022, superseding PHASES 5.1's original `eth_simulateV1` choice): Arc testnet's real
+// RPC does not implement `eth_simulateV1` — it isn't in Arc's documented supported-methods list, and
+// live testing confirmed it: every proposal was denied with "method not found" (see docs/VERIFY.md
+// row 14). The original choice (PROGRESS D-40) was checked only against Base Sepolia and anvil,
+// never against Arc itself.
 //
-// If the RPC does not implement `eth_simulateV1` we return `Err` — we never fall back to a weaker
-// simulation and call it the same thing (I5). `simulation: null`/not-ok ⇒ R11 DENY.
+// Fallback: Arc's predeployed `Multicall3From` (docs/VERIFY.md row 14) batches calls atomically in
+// one `eth_call` — which Arc's RPC does support — while its `CallFrom` precompile preserves the
+// original wallet as `msg.sender` for every subcall. That gives the same property `eth_simulateV1`
+// was chosen for: *state carry-over across several calls in one call frame* (`approve` then
+// `deposit` sees the allowance). `allowFailure: true` per call means one subcall reverting doesn't
+// unwind an earlier one's effects — matching how the real executor also sends each call as its own
+// separate transaction (`@thesauros/wallet`'s `circleTxSender`: Circle wallets have no native
+// batching on Arc today), not one atomic multi-call, so this simulates the same failure granularity
+// the real execution has.
 //
-// Balance deltas are measured, not inferred: the same block runs `balanceOf(holder)` before and
+// If the RPC does not answer this `eth_call` either, we return `Err` — we never fall back to a
+// weaker simulation and call it the same thing (I5). `simulation: null`/not-ok ⇒ R11 DENY.
+//
+// Balance deltas are measured, not inferred: the same `eth_call` runs `balanceOf(holder)` before and
 // after the real calls, so the deltas come from the EVM rather than from the proposal's claims
 // (which is exactly what R11 compares them against).
 import { decodeFunctionResult, encodeFunctionData, getAddress, type PublicClient } from 'viem';
-import { simulateCalls } from 'viem/actions';
 import {
   err,
   ok,
@@ -28,6 +35,38 @@ import {
 
 /** Structurally identical to `@thesauros/wallet`'s `Call`; `risk` must not import `wallet` (I1). */
 export type SimCall = { to: Address; data: Hex; value: bigint };
+
+/** docs/VERIFY.md row 14. Same address on mainnet and testnet (a predeployed system contract). */
+const MULTICALL3_FROM_ADDRESS = getAddress('0x522fAf9A91c41c443c66765030741e4AaCe147D0');
+
+const AGGREGATE3_ABI = [
+  {
+    type: 'function',
+    name: 'aggregate3',
+    stateMutability: 'payable',
+    inputs: [
+      {
+        name: 'calls',
+        type: 'tuple[]',
+        components: [
+          { name: 'target', type: 'address' },
+          { name: 'allowFailure', type: 'bool' },
+          { name: 'callData', type: 'bytes' },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: 'returnData',
+        type: 'tuple[]',
+        components: [
+          { name: 'success', type: 'bool' },
+          { name: 'returnData', type: 'bytes' },
+        ],
+      },
+    ],
+  },
+] as const;
 
 const BALANCE_OF_ABI = [
   {
@@ -57,14 +96,48 @@ const APPROVE_SELECTOR = '0x095ea7b3';
 
 export type SimHolder = Delta['holder'];
 
-/** One `eth_simulateV1` round trip. Split out so the result type stays inferred from viem. */
+type SimResultRow = {
+  status: 'success' | 'failure';
+  data: Hex;
+  gasUsed: bigint;
+  error?: { message: string };
+};
+
+/**
+ * One `Multicall3From.aggregate3` round trip via a plain `eth_call` (never a signed/sent tx — this
+ * only reads state). Shaped to match what `simulateCalls` used to return so the rest of this file
+ * (`readBalance`, the per-call failure scan) didn't need to change.
+ */
 async function runSimulation(
   publicClient: PublicClient,
   account: Address,
   calls: readonly SimCall[],
-) {
+): Promise<Result<{ results: SimResultRow[]; block: { number: bigint } }, SimulateError>> {
   try {
-    return ok(await simulateCalls(publicClient, { account, calls }));
+    const data = encodeFunctionData({
+      abi: AGGREGATE3_ABI,
+      functionName: 'aggregate3',
+      args: [calls.map((c) => ({ target: c.to, allowFailure: true, callData: c.data }))],
+    });
+    const [{ data: returnData }, blockNumber] = await Promise.all([
+      publicClient.call({ account, to: MULTICALL3_FROM_ADDRESS, data }),
+      publicClient.getBlockNumber(),
+    ]);
+    if (!returnData) throw new Error('Multicall3From.aggregate3 returned no data');
+    const decoded = decodeFunctionResult({
+      abi: AGGREGATE3_ABI,
+      functionName: 'aggregate3',
+      data: returnData,
+    });
+    // Multicall3From's Result has no per-call gas figure (unlike eth_simulateV1's results) — not
+    // used by any Policy Engine rule, only recorded on the `simulations` row, so 0n is fine here.
+    const results: SimResultRow[] = decoded.map((r) => ({
+      status: r.success ? 'success' : 'failure',
+      data: r.returnData,
+      gasUsed: 0n,
+      ...(r.success ? {} : { error: { message: 'reverted' } }),
+    }));
+    return ok({ results, block: { number: blockNumber } });
   } catch (e) {
     const message = String(e);
     const unsupported =
