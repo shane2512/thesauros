@@ -45,10 +45,13 @@ export function AddRecipientSign({
   const complete = label.trim() !== '' && addressLooksValid && maxParsed.ok && scheduleOk;
   const similar = looksLikeExisting(address.trim(), existing);
 
+  // `/api/policy/recipients` parses `maxPerTxUsdc` as a decimal USDC string and does its own
+  // parseUnits(..., 6) scaling — sending `maxParsed.value` (already base units) here double-scaled
+  // it by 1e6, so typing "5" landed as a $5,000,000 cap server-side. Send the raw decimal instead.
   const fields = () => ({
     label: label.trim(),
     address: address.trim(),
-    maxPerTxUsdc: (maxParsed.ok ? maxParsed.value : 0n).toString(),
+    maxPerTxUsdc: max.trim(),
     ...(dayNumber === undefined ? {} : { scheduleDayOfMonth: dayNumber }),
   });
 
