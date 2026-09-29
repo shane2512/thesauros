@@ -1,10 +1,14 @@
 'use client';
-// Recipients. The list/add chrome lives here; validation, the poisoning warning and the signature
-// all live in AddRecipientSign — embedded, not rebuilt. Adding a recipient is inert until the owner
-// also signs the next policy version (it isn't in the active policy's recipients array yet), so a
-// successful add always routes into PolicySign next — the same S7 diff+sign surface /app/policy uses.
+// Recipients. The list/add/edit chrome lives here; validation, the poisoning warning and the
+// signature all live in AddRecipientSign/EditRecipientSign — embedded, not rebuilt. Adding or
+// editing a recipient is inert until the owner also signs the next policy version (the active
+// policy's recipients array is frozen at signing time), so a successful add or edit always routes
+// into PolicySign next — the same diff+sign surface /app/policy uses. Removing needs no signature
+// (see the [id] route's DELETE — same asymmetry as rejecting an approval) but still routes there,
+// since the active policy still lists the removed recipient until the next version is signed.
 import { useState } from 'react';
 import { AddRecipientSign } from '@/components/sign/AddRecipientSign';
+import { EditRecipientSign } from '@/components/sign/EditRecipientSign';
 import { PolicySign } from '@/components/sign/PolicySign';
 import {
   Banner,
@@ -15,15 +19,20 @@ import {
   RowSkeleton,
   TextButton,
 } from '@/components/primitives';
-import { zRecipientList, type Recipient } from '@/lib/contracts';
+import { apiDelete } from '@/lib/api';
+import { zRecipientList, zRecipientRemoved, type Recipient } from '@/lib/contracts';
 import { formatMoney, groupAddress, toBig } from '@/lib/format';
 import { useApi } from '@/lib/useApi';
 
-type Mode = 'list' | 'add' | 'sign-policy';
+type Mode = 'list' | 'add' | 'edit' | 'sign-policy';
 
 export function RecipientsScreen() {
   const [mode, setMode] = useState<Mode>('list');
   const [copied, setCopied] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Recipient | null>(null);
+  const [removing, setRemoving] = useState<Recipient | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const q = useApi('/api/policy/recipients', zRecipientList);
   const recipients = q.data?.recipients ?? [];
 
@@ -32,6 +41,22 @@ export function RecipientsScreen() {
       setCopied(addr);
       setTimeout(() => setCopied(null), 2000);
     });
+  };
+
+  const confirmRemove = async () => {
+    if (!removing) return;
+    setRemoveBusy(true);
+    setRemoveError(null);
+    try {
+      await apiDelete(`/api/policy/recipients/${removing.id}`, zRecipientRemoved);
+      setRemoving(null);
+      await q.refetch();
+      setMode('sign-policy');
+    } catch {
+      setRemoveError('Thesauros could not remove this recipient. Nothing changed. Try again.');
+    } finally {
+      setRemoveBusy(false);
+    }
   };
 
   if (mode === 'add')
@@ -50,12 +75,29 @@ export function RecipientsScreen() {
       </div>
     );
 
+  if (mode === 'edit' && editing)
+    return (
+      <div className="px-4 pt-6">
+        <TextButton onClick={() => setMode('list')}>← Back to recipients</TextButton>
+        <div className="pt-4">
+          <EditRecipientSign
+            recipient={editing}
+            onCancel={() => setMode('list')}
+            onSaved={() => {
+              q.refetch();
+              setMode('sign-policy');
+            }}
+          />
+        </div>
+      </div>
+    );
+
   if (mode === 'sign-policy')
     return (
       <div className="px-4 pt-6">
         <Banner tone="info" title="One more step">
-          This recipient cannot be paid yet. Sign the next policy version to add them to what
-          Thesauros is allowed to do.
+          This change isn&apos;t in effect yet. Sign the next policy version so Thesauros picks it
+          up.
         </Banner>
         <div className="pt-4">
           <PolicySign cta="Sign and activate" onActivated={() => setMode('list')} />
@@ -105,11 +147,58 @@ export function RecipientsScreen() {
                     </>
                   }
                   right={
-                    <TextButton onClick={() => copy(r.address)}>
-                      {copied === r.address ? 'Copied' : 'Copy'}
-                    </TextButton>
+                    <span className="flex flex-col items-end gap-1">
+                      <TextButton onClick={() => copy(r.address)}>
+                        {copied === r.address ? 'Copied' : 'Copy'}
+                      </TextButton>
+                      <TextButton
+                        onClick={() => {
+                          setEditing(r);
+                          setMode('edit');
+                        }}
+                      >
+                        Edit
+                      </TextButton>
+                      <TextButton
+                        onClick={() => {
+                          setRemoveError(null);
+                          setRemoving(r);
+                        }}
+                      >
+                        Remove
+                      </TextButton>
+                    </span>
                   }
                 />
+                {removing?.id === r.id ? (
+                  <div className="mx-4 mb-3 rounded-md bg-deny-tint p-3" role="alert">
+                    <p className="text-small text-deny">
+                      Remove {r.label}? This won&apos;t affect the currently signed policy until you
+                      sign again.
+                    </p>
+                    {removeError ? (
+                      <p className="pt-1 text-small text-deny">{removeError}</p>
+                    ) : null}
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        variant="danger"
+                        className="w-auto px-5"
+                        loading={removeBusy}
+                        onClick={() => void confirmRemove()}
+                      >
+                        Remove
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-auto px-5"
+                        disabled={removeBusy}
+                        onClick={() => setRemoving(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

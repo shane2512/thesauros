@@ -204,6 +204,8 @@ export const zRecipientPrepare = z.object({ message: z.string(), expiresAt: iso 
 export type RecipientPrepare = z.infer<typeof zRecipientPrepare>;
 
 export const zRecipientAdded = z.object({ recipient: zRecipient });
+export const zRecipientEdited = z.object({ recipient: zRecipient });
+export const zRecipientRemoved = z.object({ removed: z.boolean() });
 
 export const zApproval = z.object({
   id: z.string(),

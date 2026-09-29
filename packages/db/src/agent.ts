@@ -450,6 +450,76 @@ export async function insertRecipient(
   return inserted;
 }
 
+export async function getRecipientById(
+  db: Db,
+  walletId: string,
+  recipientId: string,
+): Promise<RecipientRow | undefined> {
+  return (
+    await db
+      .select()
+      .from(recipients)
+      .where(
+        and(
+          eq(recipients.walletId, walletId),
+          eq(recipients.id, recipientId),
+          eq(recipients.status, 'active'),
+        ),
+      )
+      .limit(1)
+  )[0];
+}
+
+/**
+ * Change label/cap/schedule for an existing allowlist entry. The address is immutable through this
+ * path — changing an address is a different recipient, not an edit; an "edit address" endpoint would
+ * be exactly the attack surface address poisoning (T3/R05) exists to prevent, so re-adding is the
+ * only way to point the allowlist at a different address.
+ */
+export async function updateRecipient(
+  db: Db,
+  walletId: string,
+  recipientId: string,
+  patch: { label: string; maxPerTx: bigint; schedule: unknown; addedSignature: string },
+): Promise<RecipientRow | undefined> {
+  const [updated] = await db
+    .update(recipients)
+    .set(patch)
+    .where(
+      and(
+        eq(recipients.walletId, walletId),
+        eq(recipients.id, recipientId),
+        eq(recipients.status, 'active'),
+      ),
+    )
+    .returning();
+  return updated;
+}
+
+/**
+ * Soft-delete: flips `status` to `'removed'` rather than a hard DELETE, so audit_log rows that
+ * reference this recipient id (I6) stay valid, and `listRecipients`'s own active-only filter makes
+ * the removed recipient disappear from the allowlist immediately.
+ */
+export async function removeRecipient(
+  db: Db,
+  walletId: string,
+  recipientId: string,
+): Promise<RecipientRow | undefined> {
+  const [removed] = await db
+    .update(recipients)
+    .set({ status: 'removed' })
+    .where(
+      and(
+        eq(recipients.walletId, walletId),
+        eq(recipients.id, recipientId),
+        eq(recipients.status, 'active'),
+      ),
+    )
+    .returning();
+  return removed;
+}
+
 // ── notifications ────────────────────────────────────────────────────────────────────────────────
 
 /**
