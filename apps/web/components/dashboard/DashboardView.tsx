@@ -16,7 +16,6 @@ import {
   IconLedger,
   IconAdd,
   IconOutward,
-  IconRadar,
   IconRecipients,
   IconRefresh,
   IconSavings,
@@ -27,6 +26,7 @@ import {
   type IconComponent,
 } from '@/components/icons';
 import { CopyAddress } from '@/components/ui/CopyAddress';
+import ProgressMetricCard, { type SeriesPoint } from '@/components/ui/progress-metric-card';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button, Money, StatusPill, Tag, VerdictBadge } from '@/components/primitives';
 import type { Dashboard } from '@/lib/contracts';
@@ -79,61 +79,51 @@ export function LoopStatus({
 
 /* --------------------------------------------------------------- hero card */
 
+/** bigint -> plain number, for chart Y-axis position ONLY. The one place money crosses into a JS
+ * `number` (I12 governs money math and comparisons, not a pixel coordinate); the source of truth
+ * stays the bigint from `totalManaged`, and this value is never compared, summed, or stored. */
+function microUsdToChartNumber(microUsd: bigint): number {
+  return Number(microUsd) / 1_000_000;
+}
+
+/** The pre-Stitch balance card (ProgressMetricCard), restored at the owner's request. Honest flat
+ * series: today's real balance repeated, not an invented trend — there is no balance-history table,
+ * so a flat line correctly reads as "no observed change". */
 export function BalanceCard({ d, explorerBase }: { d: Dashboard; explorerBase: string }) {
   const balance = totalManaged(d);
   const { whole, minor } = splitBalance(balance);
-  const vaultTotal = d.vaultPositions.reduce((sum, v) => sum + toBig(v.assets), 0n);
-  const redeemable = d.vaultPositions.reduce((sum, v) => sum + toBig(v.redeemableAssets), 0n);
+  const point = microUsdToChartNumber(balance);
+  const series: SeriesPoint[] = [
+    { value: point, date: 'Yesterday' },
+    { value: point, date: 'Today' },
+  ];
+  const footer =
+    d.vaultPositions.length > 0
+      ? { delta: `${d.vaultPositions.length}`, deltaLabel: 'position(s) working' }
+      : { delta: '—', deltaLabel: 'nothing earning yet' };
   return (
-    <section
-      aria-label="Total managed treasury"
-      data-theme="dark"
-      className={`card hero-glass p-6 text-ink shadow-lift ${d.wallet.frozen ? 'opacity-70' : ''}`}
-    >
-      <div className="flex items-center justify-between gap-2">
+    <section aria-label="Total managed treasury" className={d.wallet.frozen ? 'opacity-70' : ''}>
+      <div className="flex items-center justify-between gap-2 px-1 pb-2">
         <Label>Total managed</Label>
         <a
           href={`${explorerBase}/address/${d.wallet.treasuryAddress}`}
           target="_blank"
           rel="noreferrer"
           aria-label="View the treasury address on the explorer"
-          className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 font-mono text-cap font-semibold whitespace-nowrap text-muted hover:text-ink"
+          className="inline-flex min-h-8 items-center gap-1 text-cap font-semibold text-muted hover:text-ink"
         >
-          {shortAddress(d.wallet.treasuryAddress)}
-          <IconOutward className="size-3.5" />
+          Main Arc vault <IconOutward className="size-3.5" />
         </a>
       </div>
-      <p className="flex items-baseline gap-2 pt-2 pb-1">
-        <span className="sr-only">{`${whole}${minor} USDC`}</span>
-        <span
-          aria-hidden="true"
-          className="tabular text-display leading-[48px] font-bold tracking-[-0.03em] text-ink"
-        >
-          ${whole}
-          <span className="text-minor">{minor}</span>
-        </span>
-        <span aria-hidden="true" className="text-section font-semibold text-muted">
-          USDC
-        </span>
-      </p>
-      <div className="flex flex-wrap items-center gap-2 pb-3">
-        <Tag tone="quiet">Max at risk ${formatToken(toBig(d.maxAtRiskMicroUsd))}</Tag>
-        <Tag tone="quiet">
-          {d.vaultPositions.length > 0
-            ? `${d.vaultPositions.length} position${d.vaultPositions.length === 1 ? '' : 's'} earning`
-            : 'Nothing earning yet'}
-        </Tag>
-      </div>
-      <p className="flex items-center gap-2 rounded-sm bg-surface-2 p-2.5 text-meta leading-[18px] text-ink">
-        <IconRadar className="size-[18px] shrink-0" />
-        <span className="min-w-0">
-          Yield engine: <strong className="font-bold">{formatToken(vaultTotal)} USDC</strong>{' '}
-          deployed
-          {vaultTotal > 0n
-            ? ` · ${formatToken(redeemable)} redeemable now`
-            : ' · idle cash above your buffer goes to work'}
-        </span>
-      </p>
+      <ProgressMetricCard
+        title="Treasury"
+        total={`$${whole}${minor}`}
+        delta={footer.delta}
+        deltaLabel={footer.deltaLabel}
+        data={series}
+        size="sm"
+        showStats={false}
+      />
     </section>
   );
 }

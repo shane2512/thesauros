@@ -383,8 +383,10 @@ freeze/sweep path (I7) is unchanged — the screens call the same functions they
   approval's sign sheet. `/app/activity?filter=DENY` is linked from the dashboard's blocked count.
 - **Navigation:** four tabs (Treasury, Activity, Approvals, Settings) as in Stitch; Recipients and
   Policy are reached from the dashboard and from Settings (Policy previously had no link at all).
-- **Removed:** the unused recharts balance card (`components/ui/metric-*`, `progress-metric-card`).
-  `recharts` stays in package.json for now; dropping it is a lockfile change for a separate commit.
+- **Balance card kept from before Stitch:** at the owner's request the dashboard's balance card is
+  the original `ProgressMetricCard` (white card, Treasury title, chart toggle, flat honest line,
+  "nothing earning yet"), restored unchanged from before the redesign; the rest of the dashboard
+  stays on the Stitch layout.
 
 ### D-023 — Owner sweep: reserve gas headroom, and confirm on-chain before reporting success
 

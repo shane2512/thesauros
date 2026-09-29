@@ -174,22 +174,6 @@
   color-scheme: dark;
 }
 
-/* The balance hero: a semi-transparent dark grey (not black) over the page. Unlayered and after the
-   [data-theme] blocks so its token overrides win inside the card's dark subtree. Muted and minor
-   text are raised to hold contrast on grey (muted ≈ 5.3:1, the dimmed cents ≈ 3.1:1 at 40px). */
-.hero-glass {
-  background-color: rgb(46 49 50 / 0.88);
-  --th-surface-2: rgb(255 255 255 / 0.09);
-  --th-surface-3: rgb(255 255 255 / 0.14);
-  --th-muted: rgb(235 235 245 / 0.78);
-  --th-minor: rgb(235 235 245 / 0.5);
-}
-@supports (backdrop-filter: blur(1px)) {
-  .hero-glass {
-    backdrop-filter: blur(20px) saturate(160%);
-  }
-}
-
 @theme inline {
   --color-ground: var(--th-ground);
   --color-card: var(--th-card);
@@ -301,7 +285,6 @@
 
   --shadow-e1: var(--th-shadow-e1);
   --shadow-e2: var(--th-shadow-e2);
-  --shadow-lift: 0 18px 36px -18px rgb(25 28 29 / 0.5);
 
   --ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
