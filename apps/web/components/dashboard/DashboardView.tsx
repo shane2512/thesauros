@@ -88,7 +88,7 @@ export function BalanceCard({ d, explorerBase }: { d: Dashboard; explorerBase: s
     <section
       aria-label="Total managed treasury"
       data-theme="dark"
-      className={`card p-6 text-ink shadow-lift ${d.wallet.frozen ? 'opacity-70' : ''}`}
+      className={`card hero-glass p-6 text-ink shadow-lift ${d.wallet.frozen ? 'opacity-70' : ''}`}
     >
       <div className="flex items-center justify-between gap-2">
         <Label>Total managed</Label>
