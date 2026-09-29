@@ -5,7 +5,7 @@
 // `Thesauros policy v{n} {hash}`, fetched, never composed.
 import { useState } from 'react';
 import { Button, TextButton } from '@/components/primitives';
-import { apiPost } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { zPolicyActivated, zPolicyPrepare, type PolicyPrepare } from '@/lib/contracts';
 import { useSignFlow } from '@/lib/useSignFlow';
 import { useSigner } from '@/lib/useSigner';
@@ -23,7 +23,7 @@ export function PolicySign({
   const [address, setAddress] = useState<string | null>(null);
 
   const flow = useSignFlow<PolicyPrepare>({
-    prepare: () => apiPost('/api/policy', zPolicyPrepare),
+    prepare: () => apiGet('/api/policy/prepare', zPolicyPrepare),
     sign: async (p) => {
       const addr = address ?? (await connectAddress());
       setAddress(addr);

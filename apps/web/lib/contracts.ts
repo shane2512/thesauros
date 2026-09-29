@@ -206,11 +206,13 @@ export const zRecipientAdded = z.object({ recipient: zRecipient });
 
 export const zApproval = z.object({
   id: z.string(),
+  decisionId: z.string(),
   proposalHash: z.string(),
   status: z.string(),
   message: z.string(),
   expiresAt: iso,
   decidedAt: iso.nullable(),
+  rationale: z.string().nullable(),
 });
 export type Approval = z.infer<typeof zApproval>;
 

@@ -16,7 +16,16 @@ import { db } from '@/lib/db';
 // bigint (the `money` column) can't go through JSON.stringify as-is (I12: base units stay bigint
 // everywhere until they cross an HTTP boundary, where they become decimal strings).
 function serializeRecipient(r: Awaited<ReturnType<typeof listRecipients>>[number]) {
-  return { ...r, maxPerTx: r.maxPerTx.toString() };
+  const schedule = r.schedule as { dayOfMonth?: number } | null;
+  return {
+    id: r.id,
+    label: r.label,
+    address: r.address,
+    maxPerTx: r.maxPerTx.toString(),
+    scheduleDayOfMonth: schedule?.dayOfMonth ?? null,
+    riskTier: r.riskTier,
+    status: r.status,
+  };
 }
 
 export async function GET(): Promise<NextResponse> {

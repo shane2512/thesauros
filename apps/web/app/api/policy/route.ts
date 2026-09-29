@@ -4,41 +4,32 @@ import { z } from 'zod';
 import {
   activatePolicyVersion,
   cancelApprovalsForPolicyChange,
+  getActivePolicyBody,
   getLatestMandate,
   latestPolicyVersion,
 } from '@thesauros/db';
 import { hashCanonical, policyActivationMessage, type PolicyDraft } from '@thesauros/shared';
 import { renderPolicyAsSentences } from '@thesauros/policy';
 import { requireWallet } from '@/lib/requireWallet';
-import { issuePending, consumePending } from '@/lib/nonce';
+import { apiError } from '@/lib/apiError';
+import { consumePending } from '@/lib/nonce';
 import { getSession } from '@/lib/session';
 import { db } from '@/lib/db';
 
-const ACTIVATE_TTL_MS = 5 * 60 * 1000;
-
+/** The ACTIVE policy, for read-only sentences + the opt-in JSON view. `/api/policy/prepare` is the
+ * "what would signing do" endpoint; this is "what did I already sign." Null fields mean no policy
+ * is active yet. */
 export async function GET(): Promise<NextResponse> {
   const auth = await requireWallet();
-  if (!auth) return NextResponse.json({ error: 'sign in first' }, { status: 401 });
+  if (!auth) return apiError(401, 'unauthorized', 'Sign in first.');
 
-  const database = db();
-  const mandate = await getLatestMandate(database, auth.wallet.id);
-  if (!mandate?.compiledDraft) {
-    return NextResponse.json({ draft: null, mandateId: mandate?.id ?? null });
-  }
-
-  const nextVersion = (await latestPolicyVersion(database, auth.wallet.id)) + 1;
-  const bodyHash = hashCanonical(mandate.compiledDraft);
-  const message = policyActivationMessage({ version: nextVersion, bodyHash });
-  const session = await getSession();
-  await issuePending(session, 'policy-activate', message, ACTIVATE_TTL_MS);
+  const active = await getActivePolicyBody(db(), auth.wallet.id);
+  if (!active) return NextResponse.json({ version: null, sentences: [], body: null });
 
   return NextResponse.json({
-    mandateId: mandate.id,
-    draft: mandate.compiledDraft,
-    version: nextVersion,
-    bodyHash,
-    message,
-    sentences: renderPolicyAsSentences(mandate.compiledDraft as PolicyDraft),
+    version: active.version,
+    sentences: renderPolicyAsSentences(active.body as PolicyDraft),
+    body: active.body,
   });
 }
 
@@ -69,8 +60,8 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
   const version = (await latestPolicyVersion(database, auth.wallet.id)) + 1;
   const bodyHash = hashCanonical(mandate.compiledDraft);
-  // The signed message pins version + bodyHash: if either drifted since GET issued the nonce, the
-  // message the owner actually signed won't match what we'd rebuild here, so re-derive and compare.
+  // The signed message pins version + bodyHash: if either drifted since /api/policy/prepare issued
+  // the nonce, the message the owner actually signed won't match what we'd rebuild here.
   const expected = policyActivationMessage({ version, bodyHash });
   if (expected !== parsed.data.message) {
     return NextResponse.json(

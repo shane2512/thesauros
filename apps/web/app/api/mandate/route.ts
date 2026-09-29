@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAddress } from 'viem';
-import { insertMandate, listRecipients, listVaultRows } from '@thesauros/db';
-import { canonicalJson, getEnv } from '@thesauros/shared';
-import { compileMandate, LiveServClient } from '@thesauros/reasoning';
-import type { TemplateBinding } from '@thesauros/policy';
+import { insertMandate } from '@thesauros/db';
+import { getEnv } from '@thesauros/shared';
 import { requireWallet } from '@/lib/requireWallet';
+import { apiError } from '@/lib/apiError';
+import { bindingForWallet, compileMandateText } from '@/lib/compileMandateForWallet';
 import { db } from '@/lib/db';
 
 const zBody = z.object({
@@ -15,61 +14,29 @@ const zBody = z.object({
 
 export async function POST(req: Request): Promise<NextResponse> {
   const auth = await requireWallet();
-  if (!auth) return NextResponse.json({ error: 'sign in first' }, { status: 401 });
+  if (!auth) return apiError(401, 'unauthorized', 'Sign in first.');
 
   const parsed = zBody.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: 'invalid request body' }, { status: 400 });
+  if (!parsed.success) return apiError(400, 'bad_request', 'Invalid request body.');
 
   const env = getEnv();
   if (!env.SERV_API_KEY) {
-    return NextResponse.json(
-      {
-        error:
-          'reasoning is not configured (SERV_API_KEY unset) — mandate compilation is unavailable',
-      },
-      { status: 503 },
+    return apiError(
+      503,
+      'not_configured',
+      'Reasoning is not configured (SERV_API_KEY unset) — mandate compilation is unavailable.',
     );
   }
 
   const database = db();
-  const [recipients, vaults] = await Promise.all([
-    listRecipients(database, auth.wallet.id),
-    listVaultRows(database, auth.wallet.id),
-  ]);
-
-  const binding: TemplateBinding = {
-    chainId: env.CHAIN_ID as 5042002 | 5042, // env schema only ever parses one of these two
-    treasuryAddress: getAddress(auth.wallet.treasuryAddress),
-    usdcAddress: getAddress(env.USDC_ADDRESS),
-    vaults: vaults.map((v) => ({
-      id: v.id,
-      name: v.name,
-      address: getAddress(v.address),
-      maxAllocationBps: v.maxAllocationBps,
-    })),
-    recipients: recipients.map((r) => ({
-      id: r.id,
-      label: r.label,
-      address: getAddress(r.address),
-      maxPerTxMicroUsd: r.maxPerTx.toString(),
-    })),
-  };
-
-  const client = new LiveServClient({ apiKey: env.SERV_API_KEY, baseURL: env.SERV_BASE_URL });
-  const outcome = await compileMandate({
-    client,
-    model: env.SERV_MODEL_PROPOSER,
-    mandateText: parsed.data.text,
-    binding,
-  });
+  const binding = await bindingForWallet(database, env, auth.wallet);
+  const outcome = await compileMandateText(env, parsed.data.text, binding);
 
   const mandate = await insertMandate(database, {
     walletId: auth.wallet.id,
     text: parsed.data.text,
     template: parsed.data.template,
-    // jsonb goes through the pg driver's own JSON.stringify, which throws on a raw bigint (every
-    // money field in a PolicyDraft) — canonicalJson turns those into decimal strings first.
-    compiledDraft: outcome.draft ? (JSON.parse(canonicalJson(outcome.draft)) as unknown) : null,
+    compiledDraft: outcome.compiledDraft,
     assumptions: outcome.assumptions,
     questions: outcome.questions,
   });
