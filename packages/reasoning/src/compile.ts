@@ -192,7 +192,13 @@ export function toDraft(out: ServMandate, binding: TemplateBinding): Record<stri
         id: r.id,
         label: r.label,
         address: r.address,
-        maxPerTxMicroUsd: row ? micro(row.maxPerTxUsdc) : r.maxPerTxMicroUsd,
+        // Empty maxPerTxUsdc means "the mandate doesn't say" (same convention as MANDATE_NUMBERS
+        // above), not "zero" — the recipient's own signed per-tx cap (set when they were added,
+        // via /api/policy/recipients) stays authoritative unless the model actually gave a number.
+        // Without this check, a recipient the mandate text never mentions (e.g. one added after the
+        // mandate was last written) got maxPerTxMicroUsd=0 from `micro('')`'s fallback, which fails
+        // R06's BELOW_FLOOR check and made the whole policy refuse to compile.
+        maxPerTxMicroUsd: row?.maxPerTxUsdc ? micro(row.maxPerTxUsdc) : r.maxPerTxMicroUsd,
         ...(schedule ? { schedule } : {}),
       };
     }),

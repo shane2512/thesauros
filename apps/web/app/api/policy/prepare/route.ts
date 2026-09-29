@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getLatestMandate, insertMandate, latestPolicyVersion } from '@thesauros/db';
 import {
+  createLogger,
   getEnv,
   hashCanonical,
   policyActivationMessage,
   type PolicyDraft,
 } from '@thesauros/shared';
+
+const log = createLogger('api:policy:prepare');
 import { renderPolicyAsSentences } from '@thesauros/policy';
 import { requireWallet } from '@/lib/requireWallet';
 import { apiError } from '@/lib/apiError';
@@ -46,6 +49,10 @@ export async function GET(): Promise<NextResponse> {
   const binding = await bindingForWallet(database, env, auth.wallet);
   const outcome = await compileMandateText(env, latest.text, binding);
   if (!outcome.compiledDraft) {
+    log.warn(
+      { walletId: auth.wallet.id, issues: outcome.issues, questions: outcome.questions },
+      'policy prepare: recompile did not produce a draft',
+    );
     return apiError(
       409,
       'no_draft',
