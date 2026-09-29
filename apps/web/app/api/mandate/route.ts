@@ -42,6 +42,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   });
 
   return NextResponse.json({
+    compiled: outcome.compiledDraft !== null,
     mandateId: mandate.id,
     draft: mandate.compiledDraft,
     sentences: outcome.sentences,
