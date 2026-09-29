@@ -29,6 +29,13 @@ form only they can submit — and is called out below rather than attempted blin
       round-tripped against real Postgres); beat 5 (a scheduled re-screen degrading a recipient's
       tier) is Phase 3's `screening.scan`, already tested there. Nothing new to build for these;
       running the actual demo is a human action (see below).
+- [x] Fixed `.env.example` (D-018) and `README.md` for the exit gate's "a judge can clone and run
+      from `README.md` alone" — `.env.example` previously used stale variable names that don't
+      parse against `packages/shared/src/env.ts`'s real schema (a known issue from D-006, never
+      actually fixed until now); `README.md` now names where each credential comes from, how to
+      generate the two secrets, and how to run `db:seed:demo`/`demo:attack` without a wallet.
+- [ ] Mainnet counterparty traction: deferred by the human's own instruction ("mainnet let's do
+      later") — I8's gate needs explicit sign-off and isn't attempted here.
 - [ ] **Needs the human:** fund the demo agent wallet (`0x97e3256a8172bDF43F8FA986fFDc9c3643Fd6dE8`
       — printed by `pnpm db:seed:demo` — same faucet workaround used in Phase 2, since the public
       faucet returned Forbidden); pick and configure a public host (do not assume the prior
@@ -350,6 +357,19 @@ pnpm check:arch     # depcruise clean on the real tree; fixture proves all 4 nam
 it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suites, which all pass.
 
 ## Decisions (ADR-lite)
+
+### D-018 — Fixed `.env.example` to match `packages/shared/src/env.ts`'s real schema
+
+D-006 (Phase 0) flagged that `.env.example` used stale Base/CDP-era variable names
+(`ARC_CHAIN_ID`, `REASONING_API_KEY`, no `RECEIPT_HMAC_SECRET`) that don't parse against the env
+schema, and deferred fixing it to "Phase 1/2 once the real Circle/Arc variable shapes are being
+wired up." That fix never actually landed — confirmed by hitting the exact same
+`ARC_CHAIN_ID`-vs-`CHAIN_ID` mismatch in my own working `.env.local` during Phase 4's live smoke
+test. Since Phase 5's exit gate is "a repo a judge can clone and run from README.md alone," a
+judge copying `.env.example` verbatim would have hit `getEnv()` throwing at their very first
+`pnpm dev`. Fixed `.env.example` to the real field names and added the missing
+`RECEIPT_HMAC_SECRET`; `README.md` now spells out where each credential comes from and how to
+generate the two secrets.
 
 ### D-015 — `apps/web` build config stripped of every Coinbase/AgentKit-specific workaround
 
