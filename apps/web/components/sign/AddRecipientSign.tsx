@@ -18,7 +18,7 @@ import { connectAddress, signMessage } from '@/lib/injectedWallet';
 import { BlockerPanel, FactRow, LiteralPayload, SignErrorPanel, SignStatus } from './SignSurface';
 
 const FIELD =
-  'mt-2 h-14 w-full rounded-md bg-surface-2 px-4 text-h3 text-ink placeholder:text-faint';
+  'mt-2 h-12 w-full rounded-sm bg-surface-2 px-4 text-small text-ink outline-none placeholder:text-faint focus:ring-2 focus:ring-accent';
 
 const zPrepare = z.object({ message: z.string(), expiresAt: z.string() });
 type Prepare = z.infer<typeof zPrepare>;
@@ -86,7 +86,7 @@ export function AddRecipientSign({
             id="r-label"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="Acme Studio"
+            placeholder="e.g. Design contractor"
             className={FIELD}
           />
 

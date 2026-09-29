@@ -26,8 +26,8 @@ export function UnfreezeSlot({ frozen, onUnfrozen }: { frozen: boolean; onUnfroz
 
   if (!frozen) return null;
   return (
-    <div data-slot="unfreeze" className="rounded-md bg-surface-2 p-4">
-      <p className="text-h3 font-semibold text-ink">Thesauros is stopped</p>
+    <div data-slot="unfreeze" className="rounded-md bg-deny-tint p-4">
+      <p className="text-title font-bold text-deny">Thesauros is stopped</p>
       <p className="max-w-[46ch] pt-2 text-small text-muted">
         Unfreezing lets Thesauros propose and act again, and clears the safety breaker.
       </p>

@@ -18,7 +18,7 @@ import {
   SignStatus,
 } from '@/components/sign/SignSurface';
 import { Button } from '@/components/primitives';
-import { VerdictGlyph } from '@/components/icons';
+import { IconHomeward, IconLock, IconShieldCheck, VerdictGlyph } from '@/components/icons';
 import { apiPost } from '@/lib/api';
 import { zFreezePrepare, zFreezeResult, zSweepResult, type SweepResult } from '@/lib/contracts';
 import { signErrorCopy, type SignError } from '@/lib/signCopy';
@@ -90,15 +90,15 @@ export function FreezeFlow({ frozen, onDone, onClose }: FreezeFlowProps) {
         </div>
       ) : null}
 
-      <ol className="space-y-3">
+      <ol className="space-y-2">
         <Step n={1} state={s1} title="Freeze now">
           {s1 === 'done' ? (
-            <p role="status" aria-live="assertive" className="text-small text-muted">
+            <p role="status" aria-live="assertive" className="text-meta text-muted">
               Thesauros is stopped. No further actions will be taken.
             </p>
           ) : (
             <>
-              <p className="max-w-[46ch] text-small text-muted">
+              <p className="max-w-[46ch] text-meta leading-[18px] text-muted">
                 Sign to stop Thesauros immediately. Any request waiting for your approval is
                 cancelled.
               </p>
@@ -107,14 +107,15 @@ export function FreezeFlow({ frozen, onDone, onClose }: FreezeFlowProps) {
               {freeze.error ? (
                 <SignErrorPanel error={freeze.error} onRetry={freeze.prepare} />
               ) : null}
-              <div className="pt-4">
+              <div className="pt-3">
                 <Button
                   variant="danger"
                   loading={['preparing', 'awaiting-signature', 'submitting'].includes(freeze.phase)}
                   onClick={freeze.prepared === null ? freeze.prepare : freeze.confirm}
-                  className="w-auto px-6"
+                  className="h-12 rounded-md text-meta tracking-[0.06em] uppercase"
                 >
-                  {freeze.prepared === null ? 'Freeze now' : 'Sign in wallet'}
+                  <IconLock className="size-4" />
+                  {freeze.prepared === null ? 'Freeze immediately' : 'Sign & freeze in wallet'}
                 </Button>
               </div>
             </>
@@ -123,42 +124,46 @@ export function FreezeFlow({ frozen, onDone, onClose }: FreezeFlowProps) {
 
         <Step n={2} state={s2} title="Revoke Paymaster access">
           {s2 === 'done' ? (
-            <p role="status" className="text-small text-muted">
-              Circle's Gas Station policy is account-wide, not per-treasury — there is nothing
-              further to revoke here (D-012). This step tracks the same freeze flag as step 1.
+            <p role="status" className="text-meta leading-[18px] text-muted">
+              Covered by step 1. Circle&apos;s Gas Station policy is account-wide, so the freeze
+              flag itself is what stops every sponsored call from this treasury (D-012).
             </p>
           ) : (
-            <p className="max-w-[46ch] text-small text-muted">Waiting on step 1.</p>
+            <p className="max-w-[46ch] text-meta leading-[18px] text-muted">
+              Stops Paymaster-sponsored transactions for this treasury.
+            </p>
           )}
         </Step>
 
         <Step n={3} state={s3} title="Bring funds home">
           {s3 === 'done' ? (
-            <p role="status" className="text-small text-muted">
+            <p role="status" className="text-meta text-muted">
               Everything is back in your treasury.
             </p>
           ) : (
             <>
-              <p className="max-w-[46ch] text-small text-muted">
+              <p className="max-w-[46ch] text-meta leading-[18px] text-muted">
                 Thesauros sends every dollar the agent wallet holds to your treasury address. This
                 still goes through your policy checks.
               </p>
               {sweep?.status === 'denied' ? (
-                <p className="pt-2 text-small text-deny">{sweep.reasons.join(' ')}</p>
+                <p className="pt-2 text-meta text-deny">{sweep.reasons.join(' ')}</p>
               ) : null}
               {sweep?.status === 'failed' ? (
-                <p className="pt-2 text-small text-deny">{sweep.reason}</p>
+                <p className="pt-2 text-meta text-deny">{sweep.reason}</p>
               ) : null}
               {sweepError ? (
                 <SignErrorPanel error={sweepError} onRetry={() => void runSweep()} />
               ) : null}
               {s3 === 'active' || sweepBusy ? (
-                <div className="pt-4">
+                <div className="pt-3">
                   <Button
+                    variant="dark"
                     loading={sweepBusy}
                     onClick={() => void runSweep()}
-                    className="w-auto px-6"
+                    className="h-12 rounded-md text-ui"
                   >
+                    <IconHomeward className="size-4" />
                     {sweepError || sweep?.status !== 'executed' ? 'Bring funds home' : 'Try again'}
                   </Button>
                 </div>
@@ -168,17 +173,22 @@ export function FreezeFlow({ frozen, onDone, onClose }: FreezeFlowProps) {
         </Step>
       </ol>
 
-      <div className="space-y-2 pt-6">
+      <p className="mt-3 flex items-center gap-2 rounded-md bg-allow-tint px-3 py-2.5 text-fine leading-4 font-semibold text-allow">
+        <IconShieldCheck className="size-4 shrink-0" />
+        Works even if the model, the reasoning API or the worker is down.
+      </p>
+
+      <div className="space-y-2 pt-3">
         {allDone ? (
-          <Button onClick={onDone} className="w-auto px-6">
+          <Button onClick={onDone} className="h-12 rounded-md">
             Done
           </Button>
         ) : null}
-        <Button variant="ghost" onClick={onClose} className="w-auto px-6">
-          {s1 === 'done' ? 'Close' : 'Cancel'}
+        <Button variant="ghost" onClick={onClose} className="h-12 rounded-md text-ui">
+          {s1 === 'done' ? 'Close' : 'Cancel and return'}
         </Button>
         {s1 === 'done' && !allDone ? (
-          <p className="text-small text-muted">
+          <p className="text-center text-fine text-muted">
             You can close this and come back. Thesauros stays stopped.
           </p>
         ) : null}
@@ -187,12 +197,12 @@ export function FreezeFlow({ frozen, onDone, onClose }: FreezeFlowProps) {
   );
 }
 
-const TONE: Record<StepState, string> = {
-  todo: 'text-faint',
-  active: 'text-ink',
-  busy: 'text-ink',
-  done: 'text-allow',
-  failed: 'text-deny',
+const BADGE: Record<StepState, string> = {
+  todo: 'Waiting',
+  active: 'Ready to sign',
+  busy: 'Working',
+  done: 'Done',
+  failed: 'Failed',
 };
 
 function Step({
@@ -206,19 +216,46 @@ function Step({
   title: string;
   children: React.ReactNode;
 }) {
+  const live = state === 'active' || state === 'busy';
+  const box = live
+    ? 'bg-deny-tint/70 ring-1 ring-deny/25'
+    : state === 'done'
+      ? 'bg-allow-tint/60'
+      : state === 'failed'
+        ? 'bg-deny-tint'
+        : 'bg-surface-2';
   return (
-    <li data-state={state} className="rounded-md bg-surface-2 p-4">
-      <p className={`flex items-center gap-2 text-h3 font-semibold ${TONE[state]}`}>
-        {state === 'done' ? (
-          <VerdictGlyph tone="allow" className="size-4 shrink-0" />
-        ) : state === 'failed' ? (
-          <VerdictGlyph tone="deny" className="size-4 shrink-0" />
-        ) : (
-          <span className="font-mono text-mono text-faint">{n}</span>
-        )}
-        {title}
-      </p>
-      <div className="pt-2">{children}</div>
+    <li data-state={state} className={`rounded-lg p-3.5 ${box}`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-ui font-bold text-ink">
+          {state === 'done' ? (
+            <VerdictGlyph tone="allow" className="size-5 shrink-0 text-allow" />
+          ) : state === 'failed' ? (
+            <VerdictGlyph tone="deny" className="size-5 shrink-0 text-deny" />
+          ) : (
+            <span
+              className={`flex size-5 shrink-0 items-center justify-center rounded-full text-cap font-bold ${
+                live ? 'bg-deny-fill text-on-deny-fill' : 'bg-surface-3 text-muted'
+              }`}
+            >
+              {n}
+            </span>
+          )}
+          {title}
+        </p>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-micro font-bold tracking-[0.06em] uppercase ${
+            live
+              ? 'bg-card text-deny'
+              : state === 'done'
+                ? 'bg-card text-allow'
+                : 'bg-surface-3 text-muted'
+          }`}
+        >
+          {BADGE[state]}
+        </span>
+      </div>
+      <div className="pt-1.5 pl-7">{children}</div>
     </li>
   );
 }

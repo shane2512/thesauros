@@ -89,7 +89,9 @@ export function ApprovalSign({
   return (
     <div data-testid="approval-sign">
       {detail.data ? (
-        <p className="text-h3 font-semibold text-ink">{detail.data.decision.title}</p>
+        <p className="font-display text-h2 leading-6 font-bold text-ink">
+          {detail.data.decision.title}
+        </p>
       ) : null}
       {approval.rationale ? (
         <p className="max-w-[52ch] pt-2 text-small text-muted">{approval.rationale}</p>
@@ -141,19 +143,24 @@ export function ApprovalSign({
         </p>
       ) : null}
 
-      <div className="pt-6">
+      <div className="grid grid-cols-2 gap-2 pt-6">
         <Button
+          className="rounded-sm"
           disabled={expired || !pending || flow.phase === 'done'}
           loading={flow.phase === 'awaiting-signature' || flow.phase === 'submitting'}
           onClick={flow.prepared === null ? flow.prepare : flow.confirm}
         >
-          {flow.prepared === null ? 'Approve' : 'Sign in wallet'}
+          {flow.prepared === null ? 'Approve' : 'Sign & execute'}
         </Button>
-        <div className="pt-3">
-          <Button variant="ghost" disabled={!pending} loading={rejecting} onClick={reject}>
-            Reject
-          </Button>
-        </div>
+        <Button
+          variant="soft"
+          className="rounded-sm"
+          disabled={!pending}
+          loading={rejecting}
+          onClick={reject}
+        >
+          Reject
+        </Button>
       </div>
     </div>
   );
