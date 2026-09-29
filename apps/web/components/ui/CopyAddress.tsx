@@ -18,7 +18,7 @@ export function CopyAddress({ address }: { address: string }) {
   return (
     <div className="rounded-md bg-surface-2 p-4">
       <p
-        className="font-mono text-mono break-words text-ink select-all"
+        className="font-mono text-small leading-7 tracking-[0.04em] break-words text-ink select-all"
         aria-label={address.replace(/^0x/, '0x ').replace(/(.{4})/g, '$1 ')}
       >
         {groupAddress(address)}
@@ -26,7 +26,7 @@ export function CopyAddress({ address }: { address: string }) {
       <button
         type="button"
         onClick={() => void copy()}
-        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-line-strong px-4 text-small font-bold text-ink hover:bg-surface-3"
+        className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-card px-4 text-ui font-bold text-ink shadow-e1 hover:bg-surface-3"
       >
         {copied ? <IconCheck className="size-4" /> : <IconCopy className="size-4" />}
         {copied ? 'Copied' : 'Copy address'}

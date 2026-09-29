@@ -1,49 +1,52 @@
 @import 'tailwindcss';
 
 /* ===========================================================================
-   Thesauros design tokens: black + white + one yellow accent (#FCE300),
-   Plus Jakarta Sans body font. Neutrals stay black/white; yellow is used only
-   for FILLED interactive surfaces (buttons, badges, the meter fill, active-tab
-   indicators) — never as text color on the white canvas, because yellow-on-white
-   text is illegible. Text links use black in light mode for the same reason,
-   yellow in dark mode where it reads.
+   Thesauros design tokens. Cool-grey ground (#f8f9fa), white cards on a hairline shadow, ink
+   #191c1d, and one brand yellow (#FCE300) used only for FILLED surfaces — buttons, badges, meter
+   fills, the active step — never as text on a light canvas, where yellow is illegible.
+   Space Grotesk carries headlines and money; Plus Jakarta Sans everything else; Geist Mono only
+   machine data (addresses, hashes).
 
-   Verdict colours (allow/escalate/deny) are the one deliberate exception to
-   "single accent": they are a safety signal, not brand chrome. They stay,
-   always with an icon and a word, never colour alone — removing them would
-   blunt the live "Denied" moment the security demo depends on.
+   Verdict colours (allow/escalate/deny) are the one deliberate exception to "single accent":
+   they are a safety signal, always paired with an icon and a word, never colour alone.
    =========================================================================== */
 
 /* --- light, the default --- */
 :root {
-  --th-ground: #ffffff;
-  --th-surface: #e8e8ea;
-  --th-surface-2: #dddde1;
-  --th-surface-3: #d0d0d5;
-  --th-line: rgb(0 0 0 / 0.1);
-  --th-line-strong: rgb(0 0 0 / 0.2);
-  --th-ink: #0a0a0a;
-  --th-muted: rgb(60 60 67 / 0.6);
-  --th-faint: rgb(60 60 67 / 0.3);
-  --th-minor: rgb(60 60 67 / 0.18);
+  --th-ground: #f8f9fa;
+  --th-card: #ffffff;
+  --th-surface: #f3f4f5;
+  --th-surface-2: #f3f4f5;
+  --th-surface-3: #e7e8e9;
+  --th-line: rgb(25 28 29 / 0.08);
+  --th-line-strong: rgb(25 28 29 / 0.18);
+  --th-ink: #191c1d;
+  --th-muted: #5f5e5e;
+  --th-faint: rgb(25 28 29 / 0.4);
+  --th-minor: #b9b8b7;
+  --th-inverse: #2e3132;
+  --th-on-inverse: #f0f1f2;
   --th-escalate-tint: #fdf0dc;
-  --th-deny-tint: #fdeae7;
+  --th-deny-tint: #ffdad6;
 
   --th-accent: #fce300;
-  --th-accent-press: #e5ce00;
-  --th-on-accent: #0a0a0a;
-  --th-accent-ink: #0a0a0a;
+  --th-accent-press: #e9d100;
+  --th-accent-soft: #fff6b3;
+  --th-on-accent: #191c1d;
+  --th-accent-ink: #191c1d;
 
   --th-allow: #067a59;
+  --th-allow-tint: #dcf3ea;
   --th-escalate: #8a5300;
-  --th-deny: #c42a1b;
-  --th-deny-fill: #c42a1b;
+  --th-deny: #ba1a1a;
+  --th-deny-fill: #ba1a1a;
   --th-on-deny-fill: #ffffff;
-  --th-info: #0a0a0a;
+  --th-info: #191c1d;
 
-  --th-shadow-e1: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.04);
-  --th-shadow-e2: 0 -8px 32px -8px rgb(0 0 0 / 0.14);
-  --th-glass-mix: 78%;
+  --th-shadow-e1: 0 1px 2px rgb(25 28 29 / 0.05), 0 0 0 1px rgb(25 28 29 / 0.035);
+  --th-shadow-e2: 0 -8px 32px -8px rgb(25 28 29 / 0.16);
+  --th-shadow-bar: 0 1px 8px rgb(0 0 0 / 0.04);
+  --th-glass-mix: 82%;
   --th-glass-edge: rgb(255 255 255 / 0.6);
   color-scheme: light;
 }
@@ -52,34 +55,40 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --th-ground: #000000;
+    --th-card: #1c1c1e;
     --th-surface: #1c1c1e;
     --th-surface-2: #2c2c2e;
     --th-surface-3: #3a3a3c;
-    --th-line: rgb(255 255 255 / 0.15);
-    --th-line-strong: rgb(255 255 255 / 0.28);
+    --th-line: rgb(255 255 255 / 0.12);
+    --th-line-strong: rgb(255 255 255 / 0.26);
     --th-ink: #ffffff;
-    --th-muted: rgb(235 235 245 / 0.6);
-    --th-faint: rgb(235 235 245 / 0.3);
-    --th-minor: rgb(235 235 245 / 0.18);
+    --th-muted: rgb(235 235 245 / 0.62);
+    --th-faint: rgb(235 235 245 / 0.34);
+    --th-minor: rgb(235 235 245 / 0.28);
+    --th-inverse: #f0f1f2;
+    --th-on-inverse: #191c1d;
     --th-escalate-tint: #33260c;
     --th-deny-tint: #2e1210;
 
     --th-accent: #fce300;
-    --th-accent-press: #e5ce00;
-    --th-on-accent: #0a0a0a;
-    /* intentional asymmetry: yellow text is legible on black, illegal on white */
+    --th-accent-press: #e9d100;
+    --th-accent-soft: #3a3400;
+    --th-on-accent: #191c1d;
+    /* intentional asymmetry: yellow text is legible on black, illegible on white */
     --th-accent-ink: #fce300;
 
     --th-allow: #2fd9a6;
+    --th-allow-tint: #0e2a21;
     --th-escalate: #ffb020;
     --th-deny: #ff6a5e;
     --th-deny-fill: #d92d1e;
     --th-on-deny-fill: #ffffff;
     --th-info: #fce300;
 
-    --th-shadow-e1: 0 0 0 0 transparent;
+    --th-shadow-e1: 0 0 0 1px rgb(255 255 255 / 0.06);
     --th-shadow-e2: 0 -24px 48px -12px rgb(0 0 0 / 0.55);
-    --th-glass-mix: 68%;
+    --th-shadow-bar: 0 1px 0 rgb(255 255 255 / 0.06);
+    --th-glass-mix: 72%;
     --th-glass-edge: rgb(255 255 255 / 0.08);
     color-scheme: dark;
   }
@@ -87,73 +96,87 @@
 
 /* explicit override, on <html> or on any subtree */
 [data-theme='light'] {
-  --th-ground: #ffffff;
-  --th-surface: #e8e8ea;
-  --th-surface-2: #dddde1;
-  --th-surface-3: #d0d0d5;
-  --th-line: rgb(0 0 0 / 0.1);
-  --th-line-strong: rgb(0 0 0 / 0.2);
-  --th-ink: #0a0a0a;
-  --th-muted: rgb(60 60 67 / 0.6);
-  --th-faint: rgb(60 60 67 / 0.3);
-  --th-minor: rgb(60 60 67 / 0.18);
+  --th-ground: #f8f9fa;
+  --th-card: #ffffff;
+  --th-surface: #f3f4f5;
+  --th-surface-2: #f3f4f5;
+  --th-surface-3: #e7e8e9;
+  --th-line: rgb(25 28 29 / 0.08);
+  --th-line-strong: rgb(25 28 29 / 0.18);
+  --th-ink: #191c1d;
+  --th-muted: #5f5e5e;
+  --th-faint: rgb(25 28 29 / 0.4);
+  --th-minor: #b9b8b7;
+  --th-inverse: #2e3132;
+  --th-on-inverse: #f0f1f2;
   --th-escalate-tint: #fdf0dc;
-  --th-deny-tint: #fdeae7;
+  --th-deny-tint: #ffdad6;
 
   --th-accent: #fce300;
-  --th-accent-press: #e5ce00;
-  --th-on-accent: #0a0a0a;
-  --th-accent-ink: #0a0a0a;
+  --th-accent-press: #e9d100;
+  --th-accent-soft: #fff6b3;
+  --th-on-accent: #191c1d;
+  --th-accent-ink: #191c1d;
 
   --th-allow: #067a59;
+  --th-allow-tint: #dcf3ea;
   --th-escalate: #8a5300;
-  --th-deny: #c42a1b;
-  --th-deny-fill: #c42a1b;
+  --th-deny: #ba1a1a;
+  --th-deny-fill: #ba1a1a;
   --th-on-deny-fill: #ffffff;
-  --th-info: #0a0a0a;
+  --th-info: #191c1d;
 
-  --th-shadow-e1: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.04);
-  --th-shadow-e2: 0 -8px 32px -8px rgb(0 0 0 / 0.14);
-  --th-glass-mix: 78%;
+  --th-shadow-e1: 0 1px 2px rgb(25 28 29 / 0.05), 0 0 0 1px rgb(25 28 29 / 0.035);
+  --th-shadow-e2: 0 -8px 32px -8px rgb(25 28 29 / 0.16);
+  --th-shadow-bar: 0 1px 8px rgb(0 0 0 / 0.04);
+  --th-glass-mix: 82%;
   --th-glass-edge: rgb(255 255 255 / 0.6);
   color-scheme: light;
 }
 
 [data-theme='dark'] {
   --th-ground: #000000;
+  --th-card: #1c1c1e;
   --th-surface: #1c1c1e;
   --th-surface-2: #2c2c2e;
   --th-surface-3: #3a3a3c;
-  --th-line: rgb(255 255 255 / 0.15);
-  --th-line-strong: rgb(255 255 255 / 0.28);
+  --th-line: rgb(255 255 255 / 0.12);
+  --th-line-strong: rgb(255 255 255 / 0.26);
   --th-ink: #ffffff;
-  --th-muted: rgb(235 235 245 / 0.6);
-  --th-faint: rgb(235 235 245 / 0.3);
-  --th-minor: rgb(235 235 245 / 0.18);
+  --th-muted: rgb(235 235 245 / 0.62);
+  --th-faint: rgb(235 235 245 / 0.34);
+  --th-minor: rgb(235 235 245 / 0.28);
+  --th-inverse: #f0f1f2;
+  --th-on-inverse: #191c1d;
   --th-escalate-tint: #33260c;
   --th-deny-tint: #2e1210;
 
   --th-accent: #fce300;
-  --th-accent-press: #e5ce00;
-  --th-on-accent: #0a0a0a;
+  --th-accent-press: #e9d100;
+  --th-accent-soft: #3a3400;
+  --th-on-accent: #191c1d;
+  /* intentional asymmetry: yellow text is legible on black, illegible on white */
   --th-accent-ink: #fce300;
 
   --th-allow: #2fd9a6;
+  --th-allow-tint: #0e2a21;
   --th-escalate: #ffb020;
   --th-deny: #ff6a5e;
   --th-deny-fill: #d92d1e;
   --th-on-deny-fill: #ffffff;
   --th-info: #fce300;
 
-  --th-shadow-e1: 0 0 0 0 transparent;
+  --th-shadow-e1: 0 0 0 1px rgb(255 255 255 / 0.06);
   --th-shadow-e2: 0 -24px 48px -12px rgb(0 0 0 / 0.55);
-  --th-glass-mix: 68%;
+  --th-shadow-bar: 0 1px 0 rgb(255 255 255 / 0.06);
+  --th-glass-mix: 72%;
   --th-glass-edge: rgb(255 255 255 / 0.08);
   color-scheme: dark;
 }
 
 @theme inline {
   --color-ground: var(--th-ground);
+  --color-card: var(--th-card);
   --color-surface: var(--th-surface);
   --color-surface-2: var(--th-surface-2);
   --color-surface-3: var(--th-surface-3);
@@ -180,7 +203,6 @@
 
   --color-background: var(--th-ground);
   --color-foreground: var(--th-ink);
-  --color-card: var(--th-surface);
   --color-card-foreground: var(--th-ink);
   --color-popover: var(--th-surface);
   --color-popover-foreground: var(--th-ink);
@@ -190,6 +212,10 @@
   --color-secondary-foreground: var(--th-ink);
   --color-muted-foreground: var(--th-muted);
   --color-accent-foreground: var(--th-on-accent);
+  --color-accent-soft: var(--th-accent-soft);
+  --color-allow-tint: var(--th-allow-tint);
+  --color-inverse: var(--th-inverse);
+  --color-on-inverse: var(--th-on-inverse);
   --color-destructive: var(--th-deny-fill);
   --color-destructive-foreground: var(--th-on-deny-fill);
   --color-border: var(--th-line);
@@ -201,6 +227,8 @@
 
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-grotesk), var(--font-jakarta), ui-sans-serif, sans-serif;
+  --font-blackletter: var(--font-unifraktur), 'Pirata One', serif;
 
   /* type scale */
   --text-label: 0.6875rem; /* 11px */
@@ -222,14 +250,43 @@
   --text-balance-lg: 3.25rem; /* 52px */
   --text-balance-lg--line-height: 1;
 
-  /* radii — pill-first */
-  --radius-sm: 12px;
-  --radius-md: 20px;
-  --radius-lg: 24px;
+  /* app type scale (Stitch): every size on screen is one of these */
+  --text-micro: 0.625rem; /* 10 */
+  --text-micro--line-height: 0.875rem;
+  --text-cap: 0.6875rem; /* 11: labels, tags, meta */
+  --text-cap--line-height: 0.875rem;
+  --text-fine: 0.75rem; /* 12 */
+  --text-fine--line-height: 1rem;
+  --text-meta: 0.8125rem; /* 13: secondary copy */
+  --text-meta--line-height: 1.125rem;
+  --text-ui: 0.875rem; /* 14: body in cards */
+  --text-ui--line-height: 1.25rem;
+  --text-title: 1rem; /* 16: card titles, buttons */
+  --text-title--line-height: 1.375rem;
+  --text-lead: 1.125rem; /* 18 */
+  --text-lead--line-height: 1.5rem;
+  --text-section: 1.375rem; /* 22: section + sheet titles */
+  --text-section--line-height: 1.75rem;
+  --text-stat-sm: 1.5rem; /* 24 */
+  --text-stat-sm--line-height: 1.75rem;
+  --text-headline: 1.625rem; /* 26: page titles */
+  --text-headline--line-height: 2rem;
+  --text-stat: 1.75rem; /* 28: bento figures */
+  --text-stat--line-height: 2.125rem;
+  --text-amount: 2.125rem; /* 34: event amount */
+  --text-amount--line-height: 2.5rem;
+  --text-display: 2.5rem; /* 40: the treasury balance */
+  --text-display--line-height: 3rem;
+
+  /* radii: 12px cards, pills for actions */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-xl: 28px;
 
   --shadow-e1: var(--th-shadow-e1);
   --shadow-e2: var(--th-shadow-e2);
+  --shadow-lift: 0 18px 36px -18px rgb(25 28 29 / 0.5);
 
   --ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
@@ -257,22 +314,42 @@
 }
 
 @layer components {
+  /* the one container: white card, hairline shadow, 12px corners */
+  .card {
+    border-radius: var(--radius-md);
+    background-color: var(--th-card);
+    box-shadow: var(--th-shadow-e1);
+  }
+
+  /* 11px uppercase label, the eyebrow everywhere */
+  .label {
+    font-size: 0.6875rem;
+    line-height: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--th-muted);
+  }
+
   .glass {
     background-color: var(--th-surface);
   }
 
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   @supports (backdrop-filter: blur(1px)) {
     .glass {
-      background-color: color-mix(in srgb, var(--th-surface) var(--th-glass-mix), transparent);
+      background-color: color-mix(in srgb, var(--th-card) var(--th-glass-mix), transparent);
       backdrop-filter: blur(24px) saturate(180%);
-      box-shadow: inset 0 1px 0 var(--th-glass-edge);
+      box-shadow: var(--th-shadow-bar);
     }
     .glass-sheet {
-      background-color: color-mix(
-        in srgb,
-        var(--th-surface) calc(var(--th-glass-mix) + 4%),
-        transparent
-      );
+      background-color: var(--th-card);
       backdrop-filter: blur(32px) saturate(180%);
       box-shadow:
         inset 0 1px 0 var(--th-glass-edge),
@@ -283,63 +360,47 @@
   @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
     .glass,
     .glass-sheet {
-      background-color: var(--th-surface);
+      background-color: var(--th-card);
       backdrop-filter: none;
     }
   }
 
   .scrim {
-    background-color: color-mix(in srgb, var(--th-ground) 72%, transparent);
+    background-color: rgb(25 28 29 / 0.42);
+    backdrop-filter: blur(2px);
   }
+}
 
-  .row-press {
-    border-radius: var(--radius-md);
-    background-color: var(--th-surface-3);
+/* sheets rise, dialogs settle: transform + opacity only, interruptible */
+@keyframes th-sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
   }
+}
+@keyframes th-pop-in {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+.sheet-in {
+  animation: th-sheet-in 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.pop-in {
+  animation: th-pop-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
 
-  /* the limit line, the one device */
-  .meter-track {
-    position: relative;
-    height: 8px;
-    border-radius: 999px;
-    background-color: var(--th-surface-3);
-    overflow: visible;
+/* app-shell entrance: cards settle in once, staggered by --i (set inline), on first render only */
+@keyframes th-rise-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
   }
-  .meter-fill {
-    height: 100%;
-    border-radius: 999px;
-    background-color: var(--th-accent);
-  }
-  /* the ground the agent may never reach: recessed, past the limit line */
-  .meter-beyond {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 0 999px 999px 0;
-    background-color: var(--th-ground);
-  }
-  /* the wall at the edge of what the agent may touch; never clipped by the track */
-  .limit-line {
-    position: absolute;
-    top: -4px;
-    bottom: -4px;
-    width: 2px;
-    border-radius: 1px;
-    background-color: var(--th-ink);
-    transform: translateX(-1px);
-  }
-
-  /* the wordmark's rule: the fence that stops short of the end */
-  .wordmark-rule {
-    position: absolute;
-    left: 0;
-    bottom: -3px;
-    width: 62%;
-    height: 2px;
-    border-radius: 1px;
-    background-color: var(--th-accent);
-  }
+}
+.rise-in {
+  animation: th-rise-in 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
 }
 
 /* the single ambient motion, and only while the agent is running */
