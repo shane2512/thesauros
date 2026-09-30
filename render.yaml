@@ -1,17 +1,23 @@
-# Render Blueprint — deploys the whole stack (web + worker + Postgres) from one file.
+# Render Blueprint — one combined service (web + worker) on Render's free tier.
 # Docs: https://render.com/docs/blueprint-spec
 #
-# To deploy: push this repo to GitHub, then in Render — New > Blueprint > pick this repo. Render
-# reads this file and provisions everything below in one go. The web service's URL will be
-# https://thesauros-wb3.onrender.com (Render always uses <service name>.onrender.com; a shorter or
-# already-taken name gets a numeric suffix instead — check the name is free before deploying, or
-# add a custom domain afterward in the service's Settings > Custom Domains).
+# Render's free plan only supports Web Services, not Background Workers (a Starter-or-above paid
+# plan is required for those). To stay on the free tier, the worker (Thesauros's autonomous decision
+# loop) runs alongside the Next.js server in the SAME service, backgrounded behind it in
+# startCommand — the web process is what Render's health check and port-binding requirement see;
+# the worker runs quietly next to it with no HTTP surface of its own. If a paid plan becomes
+# available later, split it back into a real `type: worker` service for proper independent restarts.
+#
+# To deploy: push this repo to GitHub, then in Render — New > Blueprint > pick this repo. The
+# service's URL is https://thesauros-wb3.onrender.com (Render always uses <service name>.onrender.com;
+# a taken name gets a numeric suffix instead — check the name is free before deploying, or add a
+# custom domain afterward in the service's Settings > Custom Domains).
 #
 # Secrets marked `sync: false` are never stored in this file or in git — Render prompts for each one
 # once, in its dashboard, the first time you deploy (Environment tab of that service afterward).
 #
 # Database: an external Neon Postgres (not a Render-managed database) — DATABASE_URL is set as a
-# secret on each service, not via `fromDatabase`.
+# secret, not via `fromDatabase`.
 
 services:
   - type: web
@@ -21,7 +27,7 @@ services:
     region: oregon
     rootDir: .
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @thesauros/db migrate && pnpm --filter @thesauros/web build
-    startCommand: pnpm --filter @thesauros/web start
+    startCommand: pnpm --filter @thesauros/worker start & pnpm --filter @thesauros/web start
     healthCheckPath: /api/config
     envVars:
       - key: NODE_VERSION
@@ -49,38 +55,3 @@ services:
         sync: false
       - key: RECEIPT_HMAC_SECRET
         sync: false
-
-  - type: worker
-    name: thesauros-wb3-worker
-    runtime: node
-    plan: free
-    region: oregon
-    rootDir: .
-    buildCommand: corepack enable && pnpm install --frozen-lockfile
-    startCommand: pnpm --filter @thesauros/worker start
-    envVars:
-      - key: NODE_VERSION
-        value: 22
-      - key: DATABASE_URL
-        sync: false
-      - key: ARC_RPC_URL
-        value: https://rpc.testnet.arc.io
-      - key: CHAIN_ID
-        value: '5042002'
-      - key: SERV_BASE_URL
-        value: https://inference-api.openserv.ai/v1
-      - key: DEMO_MODE
-        value: 'true'
-      - key: THESAUROS_ALLOW_MAINNET
-        value: 'false'
-      - key: CIRCLE_API_KEY
-        sync: false
-      - key: CIRCLE_ENTITY_SECRET
-        sync: false
-      - key: SERV_API_KEY
-        sync: false
-      - key: SESSION_SECRET
-        sync: false
-      - key: RECEIPT_HMAC_SECRET
-        sync: false
-    # This service reads from Postgres directly; no separate render database resource is declared.
