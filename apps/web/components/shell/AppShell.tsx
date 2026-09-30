@@ -18,6 +18,7 @@ const ARC_TESTNET = 5042002;
 export function backFor(pathname: string): { href: string; title: string } | null {
   if (pathname === '/app/policy') return { href: '/app', title: 'Policy' };
   if (pathname === '/app/recipients') return { href: '/app', title: 'Recipients' };
+  if (pathname === '/app/vaults') return { href: '/app', title: 'Vaults' };
   if (pathname === '/app/settings/close') return { href: '/app/settings', title: 'Close account' };
   if (pathname.startsWith('/app/activity/'))
     return { href: '/app/activity', title: 'Event & proof' };

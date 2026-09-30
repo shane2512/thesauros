@@ -278,6 +278,7 @@ export function StatGrid({ d }: { d: Dashboard }) {
             ? d.vaultPositions.map((v) => v.name).join(', ')
             : 'No vault position yet'
         }
+        href="/app/vaults"
       />
       <StatCard
         label="Policy"

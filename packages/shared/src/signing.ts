@@ -54,6 +54,32 @@ export function recipientAddMessage(input: RecipientMessageInput): string {
   ].join('\n');
 }
 
+export type VaultMessageInput = {
+  walletId: string;
+  name: string;
+  /** Checksummed by the caller — the Teller/vault contract calls will go to exactly this address. */
+  address: string;
+  kind: 'erc4626' | 'usyc_teller';
+  maxAllocationBps: number;
+  nonce: string;
+  expiresAt: Date;
+};
+
+/** Same one-labelled-fact-per-line shape as `recipientAddMessage` (D-80), so a phishing site can't
+ * get a signature Thesauros would accept for adding a different vault. */
+export function vaultAddMessage(input: VaultMessageInput): string {
+  return [
+    'Thesauros vault',
+    `Wallet: ${input.walletId}`,
+    `Name: ${oneLine(input.name)}`,
+    `Address: ${input.address}`,
+    `Kind: ${input.kind}`,
+    `Max allocation: ${(input.maxAllocationBps / 100).toFixed(2)}%`,
+    `Nonce: ${input.nonce}`,
+    `Expires: ${input.expiresAt.toISOString()}`,
+  ].join('\n');
+}
+
 /** Owner-path confirmations (freeze / unfreeze / sweep) are single-use and short-lived. */
 export const FREEZE_CONFIRMATION_TTL_MS = 5 * 60 * 1000;
 

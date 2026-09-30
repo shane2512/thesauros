@@ -207,6 +207,26 @@ export const zRecipientAdded = z.object({ recipient: zRecipient });
 export const zRecipientEdited = z.object({ recipient: zRecipient });
 export const zRecipientRemoved = z.object({ removed: z.boolean() });
 
+// ── vaults (D-024) ───────────────────────────────────────────────────────────────────────────────
+export const zVaultKind = z.enum(['erc4626', 'usyc_teller']);
+export const zVault = z.object({
+  id: z.string(),
+  name: z.string(),
+  address: z.string(),
+  kind: zVaultKind,
+  maxAllocationBps: z.number(),
+  flagged: z.boolean(),
+});
+export type Vault = z.infer<typeof zVault>;
+
+export const zVaultList = z.object({ vaults: z.array(zVault) });
+export type VaultList = z.infer<typeof zVaultList>;
+
+export const zVaultPrepare = z.object({ message: z.string(), expiresAt: iso });
+export type VaultPrepare = z.infer<typeof zVaultPrepare>;
+
+export const zVaultAdded = z.object({ vault: zVault });
+
 export const zApproval = z.object({
   id: z.string(),
   decisionId: z.string(),

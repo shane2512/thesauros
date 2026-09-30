@@ -54,6 +54,27 @@ export async function listVaultRows(db: Db, walletId: string): Promise<VaultRow[
   return db.select().from(vaults).where(eq(vaults.walletId, walletId));
 }
 
+/**
+ * Add a vault to the allowlist. `id` is a short, owner-facing slug (e.g. `v1`) the mandate/policy
+ * reference by — the caller picks it (mirrors the mandate templates' own `v1`/`r_alex` convention),
+ * since `(id, wallet_id)` is the table's primary key rather than an auto-generated UUID.
+ */
+export async function insertVault(
+  db: Db,
+  row: {
+    id: string;
+    walletId: string;
+    name: string;
+    address: string;
+    assetAddress: string;
+    kind: string;
+    maxAllocationBps: number;
+  },
+): Promise<VaultRow | undefined> {
+  const [inserted] = await db.insert(vaults).values(row).onConflictDoNothing().returning();
+  return inserted;
+}
+
 /** Flag / unflag a vault after a risk trigger (R04 refuses deposits into a flagged vault). */
 export async function setVaultFlagged(
   db: Db,
