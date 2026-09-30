@@ -13,6 +13,7 @@ import {
   IconRecipients,
   IconRevoke,
   IconShieldCheck,
+  IconVault,
   type IconComponent,
 } from '@/components/icons';
 import { Button, PageHeading, Row, Tag } from '@/components/primitives';
@@ -123,6 +124,12 @@ export function SettingsScreen() {
             title="Recipients"
             sub="Who Thesauros is allowed to pay"
             href="/app/recipients"
+          />
+          <LinkRow
+            icon={IconVault}
+            title="Vaults"
+            sub="Where idle USDC earns yield"
+            href="/app/vaults"
           />
         </div>
       </Group>
