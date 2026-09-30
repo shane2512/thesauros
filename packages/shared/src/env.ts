@@ -54,6 +54,12 @@ const schema = z.object({
   USDC_ADDRESS: address.default('0x3600000000000000000000000000000000000000'),
   SPEND_PERMISSION_MANAGER_ADDRESS: address.default('0xf85210B21cC50302F477BA56686d2019dC9b67Ad'),
   MOCK_VAULT_ADDRESS: address.optional(),
+  // D-024 / docs/VERIFY.md row 15 — Circle's real yield-bearing fund token on Arc testnet, and the
+  // Teller contract that mints/redeems it from USDC. Both require the depositing wallet to be
+  // allowlisted first (Circle support ticket, 24-48h) and be a non-U.S.-Person entity (Reg S) —
+  // these addresses being configured does not by itself mean a wallet can use them.
+  USYC_ADDRESS: address.default('0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C'),
+  USYC_TELLER_ADDRESS: address.default('0x9fdF14c5B14173D74C08Af27AebFf39240dC105A'),
   // Phase 5: the I11 demo price source (docs/addresses.md). Optional: absent means no oracle, which
   // the Policy Engine treats as a DENY (R12) unless the fenced demo parity applies.
   MOCK_PRICE_FEED_ADDRESS: address.optional(),

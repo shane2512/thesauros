@@ -388,6 +388,47 @@ freeze/sweep path (I7) is unchanged — the screens call the same functions they
   "nothing earning yet"), restored unchanged from before the redesign; the rest of the dashboard
   stays on the Stitch layout.
 
+### D-024 — Real USYC investigated for the yield feature; prepped, not wired live (blocked on allowlist + Reg S)
+
+The human asked whether the yield part was implemented for real. It wasn't, in two layers: the
+`vault_deposit`/`vault_withdraw`/`risk_exit` mechanism and R08's runway-buffer rule are real and the
+autonomous loop can choose them, but (a) they only ever pointed at `contracts/src/MockVault.sol`
+(the documented fallback), and (b) a deeper problem found while checking this: **no code path in
+the live app writes a row into the `vaults` table at all** — `insertVault` is called nowhere outside
+test fixtures, so a real onboarded wallet has zero vaults regardless of Mock-vs-real, the same class
+of gap D-021's Recipients screen fixed for the allowlist before it existed.
+
+Investigated whether real USYC (not Mock) is realistic for the demo. Findings, all in
+`docs/VERIFY.md` row 15:
+
+- **Real Arc testnet addresses exist** (USYC token, Entitlements, Teller) and Teller's
+  `deposit`/`redeem` are ABI-identical to the ERC-4626 calls already built — so wiring the real
+  contract in is close to an address swap for deposits and full exits.
+- **`vault_withdraw` has no equivalent** — Circle only documents Teller `deposit`/`redeem`, no
+  by-asset-amount `withdraw`. Would need to become `NOT_IMPLEMENTED` for a Teller-kind vault (same
+  pattern as `pull_allowance`'s existing NOT_IMPLEMENTED for the Base-specific mechanism).
+- **Position reading needs a rework, not a swap**: `getVaultPosition` assumes one address is both
+  the share token and the valuation logic; USYC splits those, and its price floats with accrued
+  yield (confirmed live: `usyc.dev.hashnote.com/api/price` returned `$1.1387`, not `$1.00`) rather
+  than being read via an on-chain `convertToAssets` the Teller doesn't expose.
+- **`zPolicyVault.kind` is `z.literal('erc4626')`** (`packages/shared/src/schemas/policy.ts`) — a
+  hard literal, not a union, so it can't yet even represent a Teller-kind vault to route the two
+  points above differently.
+- **The real gate isn't code, it's Circle**: the depositing wallet must be allowlisted via the
+  Entitlements contract, requiring a Circle Support ticket (documented 24-48h turnaround), AND
+  Circle's own USYC overview restricts eligibility to entities that are **not U.S. Persons**
+  (Regulation S) — unverified for whatever entity this submission uses. Code readiness doesn't
+  remove this gate.
+
+Given the size (a schema widen, two call-building/position-reading changes, plus the missing
+Add-Vault UI entirely) and that none of it is testable until the allowlist ticket clears regardless,
+scope for this pass: real USYC/Teller addresses added to `packages/shared/src/env.ts`
+(`USYC_ADDRESS`, `USYC_TELLER_ADDRESS`) as prep — nothing calls them yet, `MockVault.sol` stays the
+active default. The owner opening the Circle Support ticket with the real agent wallet address is a
+human action, not something this session can do. The rest (schema widen, Teller-kind branching,
+position-reading rework, the Add-Vault UI) is scoped but not started, pending the human's call on
+how much to build ahead of allowlist approval.
+
 ### D-023 — Owner sweep: reserve gas headroom, and confirm on-chain before reporting success
 
 Found live, right after D-022 fixed the simulation transport: the sweep executed and reported
