@@ -11,12 +11,22 @@ export const zPolicyToken = z.object({
 });
 export type PolicyToken = z.infer<typeof zPolicyToken>;
 
+/**
+ * D-024 — `usyc_teller` added alongside the original `erc4626`: Circle's real USYC on Arc is not a
+ * plain ERC-4626 vault. Its Teller contract's `deposit`/`redeem` are ABI-identical to ERC-4626's, so
+ * `vault_deposit` and a full-redeem `risk_exit` work unchanged, but it has no `withdraw` (partial,
+ * by-asset-amount) and no `convertToAssets`/`maxWithdraw` for position valuation — `address` here is
+ * the Teller (where deposit/redeem calls go), never the USYC token itself.
+ */
+export const zVaultKind = z.enum(['erc4626', 'usyc_teller']);
+export type VaultKind = z.infer<typeof zVaultKind>;
+
 export const zPolicyVault = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   address: zAddress,
   asset: zAddress,
-  kind: z.literal('erc4626'),
+  kind: zVaultKind,
   /** Share of managed funds this vault may hold, in basis points (R09). */
   maxAllocationBps: z.number().int().min(0).max(10_000),
 });

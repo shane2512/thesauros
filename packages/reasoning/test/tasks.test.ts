@@ -258,7 +258,15 @@ const binding = {
   chainId: 5042002 as const,
   treasuryAddress: TREASURY,
   usdcAddress: USDC,
-  vaults: [{ id: 'v1', name: 'Demo vault', address: VAULT, maxAllocationBps: 5_000 }],
+  vaults: [
+    {
+      id: 'v1',
+      name: 'Demo vault',
+      address: VAULT,
+      kind: 'erc4626' as const,
+      maxAllocationBps: 5_000,
+    },
+  ],
   recipients: [
     { id: 'r_alex', label: 'Alex', address: ALEX, maxPerTxMicroUsd: '5000000000' },
     { id: 'r_priya', label: 'Priya', address: PRIYA, maxPerTxMicroUsd: '5000000000' },

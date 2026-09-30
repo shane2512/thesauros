@@ -6,7 +6,7 @@
 // recipients/vaults that existed at compile time.
 import { getAddress } from 'viem';
 import { listRecipients, listVaultRows, type Db } from '@thesauros/db';
-import { canonicalJson, type Env } from '@thesauros/shared';
+import { canonicalJson, zVaultKind, type Env } from '@thesauros/shared';
 import { compileMandate, LiveServClient } from '@thesauros/reasoning';
 import type { TemplateBinding } from '@thesauros/policy';
 
@@ -27,6 +27,9 @@ export async function bindingForWallet(
       id: v.id,
       name: v.name,
       address: getAddress(v.address),
+      // `vaults.kind` is a free-text DB column (packages/db/src/schema.ts); fall back to the
+      // original 'erc4626' default for any row that predates D-024 rather than throwing.
+      kind: zVaultKind.catch('erc4626').parse(v.kind),
       maxAllocationBps: v.maxAllocationBps,
     })),
     recipients: recipients.map((r) => ({

@@ -4,7 +4,12 @@
 // no template can ever introduce a destination (I4 / T3).
 //
 // The `startup` values are the DEMO.md "Startup Operating" demo values.
-import { type Address, type PolicyDraft, type ProposalKind } from '@thesauros/shared';
+import {
+  type Address,
+  type PolicyDraft,
+  type ProposalKind,
+  type VaultKind,
+} from '@thesauros/shared';
 import { validatePolicyDraft, type PolicyIssue } from './validate';
 import type { Result } from '@thesauros/shared';
 
@@ -103,7 +108,13 @@ export type TemplateBinding = {
   chainId: 5042002 | 5042; // Arc testnet | mainnet (docs/VERIFY.md rows 1, 13)
   treasuryAddress: Address;
   usdcAddress: Address;
-  vaults: { id: string; name: string; address: Address; maxAllocationBps: number }[];
+  vaults: {
+    id: string;
+    name: string;
+    address: Address;
+    kind: VaultKind;
+    maxAllocationBps: number;
+  }[];
   recipients: {
     id: string;
     label: string;
@@ -126,7 +137,7 @@ export function policyDraftFromTemplate(
     chainId: binding.chainId,
     treasuryAddress: binding.treasuryAddress,
     tokens: [{ symbol: 'USDC', address: binding.usdcAddress, decimals: 6 }],
-    vaults: binding.vaults.map((v) => ({ ...v, asset: binding.usdcAddress, kind: 'erc4626' })),
+    vaults: binding.vaults.map((v) => ({ ...v, asset: binding.usdcAddress })),
     recipients: binding.recipients,
     limits: t.limits,
     runwayBufferMicroUsd: t.runwayBufferMicroUsd,

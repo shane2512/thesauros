@@ -128,6 +128,14 @@ export function buildCalls(
           'UNKNOWN_VAULT',
           `vaultId "${proposal.params.vaultId}" is not on the policy allowlist`,
         );
+      // D-024: Circle's real USYC Teller only documents deposit()/redeem() (a full share-based
+      // exit) — no by-asset-amount withdraw(). A partial withdrawal from a Teller-kind vault isn't
+      // buildable; risk_exit's full redeem() below still works for it.
+      if (vault.kind === 'usyc_teller')
+        return fail(
+          'NOT_IMPLEMENTED',
+          'partial vault_withdraw is not available for a Teller-backed vault (Circle exposes deposit/redeem only); use a full risk_exit instead',
+        );
       return ok([
         {
           to: vault.address,

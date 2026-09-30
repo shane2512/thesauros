@@ -37,7 +37,13 @@ describe('DEMO.md golden verdicts', () => {
       treasuryAddress: ADDR.treasury,
       usdcAddress: ADDR.usdc,
       vaults: [
-        { id: 'v1', name: 'Thesauros Demo Vault', address: ADDR.vault, maxAllocationBps: 5_000 },
+        {
+          id: 'v1',
+          name: 'Thesauros Demo Vault',
+          address: ADDR.vault,
+          kind: 'erc4626',
+          maxAllocationBps: 5_000,
+        },
       ],
       recipients: [
         { id: 'alex', label: 'Alex', address: ADDR.alex, maxPerTxMicroUsd: usdc(5_000).toString() },

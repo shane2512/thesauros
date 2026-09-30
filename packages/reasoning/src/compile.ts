@@ -176,7 +176,7 @@ export function toDraft(out: ServMandate, binding: TemplateBinding): Record<stri
       name: v.name,
       address: v.address,
       asset: binding.usdcAddress,
-      kind: 'erc4626',
+      kind: v.kind,
       maxAllocationBps: vaultBps.get(v.id) ?? v.maxAllocationBps,
     })),
     recipients: binding.recipients.map((r) => {

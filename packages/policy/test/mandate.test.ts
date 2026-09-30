@@ -18,7 +18,13 @@ const binding = {
   treasuryAddress: ADDR.treasury,
   usdcAddress: ADDR.usdc,
   vaults: [
-    { id: 'v1', name: 'Thesauros Demo Vault', address: ADDR.vault, maxAllocationBps: 5_000 },
+    {
+      id: 'v1',
+      name: 'Thesauros Demo Vault',
+      address: ADDR.vault,
+      kind: 'erc4626' as const,
+      maxAllocationBps: 5_000,
+    },
   ],
   recipients: [
     { id: 'alex', label: 'Alex', address: ADDR.alex, maxPerTxMicroUsd: usdc(2_000).toString() },
