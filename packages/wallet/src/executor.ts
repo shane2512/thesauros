@@ -18,6 +18,7 @@ import {
 } from '@thesauros/shared';
 import { classifyError, execError, type ExecError } from './errors';
 import { buildCalls, callsHash, type BuildContext } from './actionRegistry';
+import { CIRCLE_TERMINAL_FAILURE, CIRCLE_TERMINAL_SUCCESS } from './circleStatus';
 import type { CircleClient, TxSender } from './provision';
 
 export type ExecuteOutcome = {
@@ -152,8 +153,6 @@ export type ConfirmArgs = {
 
 export type ConfirmOutcome = { status: 'confirmed' | 'failed'; reason?: string; txHash?: Hex };
 
-const CIRCLE_TERMINAL_SUCCESS = new Set(['CONFIRMED', 'COMPLETE']);
-const CIRCLE_TERMINAL_FAILURE = new Set(['CANCELLED', 'DENIED', 'FAILED']);
 const TRANSFER = parseAbiItem(
   'event Transfer(address indexed from, address indexed to, uint256 value)',
 );

@@ -22,8 +22,10 @@ import {
 } from '@thesauros/shared';
 import { MOCK_PRICE_FEED_ABI } from './abi';
 import type { Call } from './actionRegistry';
+import { CIRCLE_TERMINAL_FAILURE, CIRCLE_TERMINAL_SUCCESS } from './circleStatus';
 
 const log = createLogger('wallet');
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type CircleClient = ReturnType<typeof initiateDeveloperControlledWalletsClient>;
 
@@ -97,6 +99,36 @@ export type TxSender = {
   send(calls: readonly Call[]): Promise<Result<{ providerTxId: string }, string>>;
 };
 
+/** How long to wait for one call in a multi-call sequence to reach a terminal Circle state before
+ * sending the next. Arc's finality is deterministic and near-instant (docs/VERIFY.md), so this is a
+ * generous multiple of that, not a guess. */
+const CALL_CONFIRM_TIMEOUT_MS = 20_000;
+const CALL_CONFIRM_POLL_MS = 1_000;
+
+/**
+ * Poll Circle for one submitted call's terminal state. Never throws: an unresolved/failed check is
+ * `Err`, which the caller (`send`) turns into refusing to submit the next dependent call rather than
+ * guessing it landed.
+ */
+async function waitForTerminal(client: CircleClient, id: string): Promise<Result<void, string>> {
+  const deadline = Date.now() + CALL_CONFIRM_TIMEOUT_MS;
+  for (;;) {
+    let state: string | undefined;
+    try {
+      const res = await client.getTransaction({ id });
+      state = res.data?.transaction?.state;
+    } catch (e) {
+      return err(`Circle getTransaction failed: ${describeCircleError(e)}`);
+    }
+    if (state && CIRCLE_TERMINAL_SUCCESS.has(state)) return ok(undefined);
+    if (state && CIRCLE_TERMINAL_FAILURE.has(state))
+      return err(`call ${id} did not confirm (Circle state: ${state})`);
+    if (Date.now() >= deadline)
+      return err(`call ${id} did not reach a terminal state within ${CALL_CONFIRM_TIMEOUT_MS}ms`);
+    await sleep(CALL_CONFIRM_POLL_MS);
+  }
+}
+
 export function circleTxSender(client: CircleClient, walletId: string, address: Address): TxSender {
   return {
     getAddress: () => address,
@@ -107,8 +139,17 @@ export function circleTxSender(client: CircleClient, walletId: string, address: 
       // multicall — a known Phase 2 limitation (docs/PROGRESS.md), not a security gap: R18 already
       // requires the approval to be for the exact deposit amount, so a call that failed partway
       // through leaves at most a dangling approval, never a mismatched fund movement.
+      //
+      // Found live: `createContractExecutionTransaction` only acknowledges SUBMISSION, not on-chain
+      // confirmation — firing the next call immediately after can (and did) let a deposit's
+      // transaction land before its own approve had actually confirmed, reverting with "ERC20:
+      // transfer amount exceeds allowance" even though the approve itself succeeded moments later.
+      // Every call but the last is now confirmed before the next is sent; the last call's id is
+      // still returned immediately (its own confirmation is `confirmExecution`'s job, 5.5).
       let last: { id: string } | undefined;
-      for (const call of calls) {
+      for (let i = 0; i < calls.length; i++) {
+        const call = calls[i];
+        if (!call) continue;
         try {
           const res = await client.createContractExecutionTransaction({
             walletId,
@@ -121,6 +162,11 @@ export function circleTxSender(client: CircleClient, walletId: string, address: 
           if (!id)
             return err('Circle createContractExecutionTransaction returned no transaction id');
           last = { id };
+          if (i < calls.length - 1) {
+            const confirmed = await waitForTerminal(client, id);
+            if (!confirmed.ok)
+              return err(`call #${i} to ${call.to} did not confirm: ${confirmed.error}`);
+          }
         } catch (e) {
           return err(`Circle send failed: ${describeCircleError(e)}`);
         }
