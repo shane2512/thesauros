@@ -22,7 +22,13 @@
 // Balance deltas are measured, not inferred: the same `eth_call` runs `balanceOf(holder)` before and
 // after the real calls, so the deltas come from the EVM rather than from the proposal's claims
 // (which is exactly what R11 compares them against).
-import { decodeFunctionResult, encodeFunctionData, getAddress, type PublicClient } from 'viem';
+import {
+  decodeAbiParameters,
+  decodeFunctionResult,
+  encodeFunctionData,
+  getAddress,
+  type PublicClient,
+} from 'viem';
 import {
   err,
   ok,
@@ -96,6 +102,32 @@ const APPROVE_SELECTOR = '0x095ea7b3';
 
 export type SimHolder = Delta['holder'];
 
+const ERROR_STRING_SELECTOR = '0x08c379a0';
+const PANIC_SELECTOR = '0x4e487b71';
+
+/**
+ * `Multicall3From.aggregate3`'s per-call `returnData` on failure IS the revert data — decode the two
+ * standard Solidity shapes (`Error(string)`, `Panic(uint256)`) so a failed simulation says why,
+ * rather than a bare "reverted" (eth_simulateV1's own results carried a decoded message; this keeps
+ * that same diagnostic value with the Multicall3From transport, D-022).
+ */
+function decodeRevertReason(data: Hex): string {
+  if (!data || data === '0x') return 'reverted';
+  try {
+    if (data.startsWith(ERROR_STRING_SELECTOR)) {
+      const [reason] = decodeAbiParameters([{ type: 'string' }], `0x${data.slice(10)}`);
+      return reason || 'reverted';
+    }
+    if (data.startsWith(PANIC_SELECTOR)) {
+      const [code] = decodeAbiParameters([{ type: 'uint256' }], `0x${data.slice(10)}`);
+      return `panic 0x${code.toString(16)}`;
+    }
+  } catch {
+    // fall through to the raw-data message below
+  }
+  return `reverted (${data})`;
+}
+
 type SimResultRow = {
   status: 'success' | 'failure';
   data: Hex;
@@ -135,7 +167,7 @@ async function runSimulation(
       status: r.success ? 'success' : 'failure',
       data: r.returnData,
       gasUsed: 0n,
-      ...(r.success ? {} : { error: { message: 'reverted' } }),
+      ...(r.success ? {} : { error: { message: decodeRevertReason(r.returnData) } }),
     }));
     return ok({ results, block: { number: blockNumber } });
   } catch (e) {
