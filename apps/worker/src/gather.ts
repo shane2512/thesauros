@@ -40,6 +40,7 @@ import {
 import {
   getBalances,
   getSharePrice,
+  getUsycPriceMicroUsd,
   getVaultPosition,
   parseSpendPermission,
   readAllowanceRemaining,
@@ -102,6 +103,9 @@ export type GatherDeps = {
   db: Db;
   publicClient: PublicClient;
   spendPermissionManagerAddress: Address;
+  /** D-024: the USYC token address, needed to read a usyc_teller-kind vault's position (its shares
+   * live on the token, not the Teller). Absent means no Teller-kind vault can be gathered. */
+  usycAddress?: Address | undefined;
   allowMainnet: boolean;
   now: () => Date;
   /** I11-fenced; absent outside DEMO_MODE. `Err` from it means "no quote", never "assume $1". */
@@ -158,11 +162,39 @@ export async function gather(
   );
   const vaults: GatheredVault[] = [];
   const contractHasCode: Record<string, boolean> = { [usdc]: true };
+  // D-024: fetched once, not per vault — every usyc_teller-kind vault shares the one real USYC
+  // deployment, so there is exactly one price to look up regardless of vault count.
+  const usycPrice = policy.vaults.some((v) => v.kind === 'usyc_teller')
+    ? await getUsycPriceMicroUsd()
+    : undefined;
+  if (usycPrice && !usycPrice.ok) return fail('READ_FAILED', usycPrice.error);
   for (const v of policy.vaults) {
     const address = getAddress(v.address);
-    const position = await getVaultPosition(publicClient, { vault: address, holder: agent });
+    const isTeller = v.kind === 'usyc_teller';
+    if (isTeller && !deps.usycAddress)
+      return fail('READ_FAILED', `vault "${v.id}" is usyc_teller but no USYC token address is set`);
+    // usycPrice is defined and ok whenever isTeller is true — computed from the same predicate,
+    // and the guard above already returned if it failed.
+    const usycPriceValue = usycPrice && usycPrice.ok ? usycPrice.value : undefined;
+    const position =
+      isTeller && usycPriceValue !== undefined
+        ? await getVaultPosition(publicClient, {
+            vault: address,
+            holder: agent,
+            kind: 'usyc_teller',
+            shareToken: deps.usycAddress as Address,
+            sharePriceMicroUsd: usycPriceValue,
+          })
+        : await getVaultPosition(publicClient, { vault: address, holder: agent });
     if (!position.ok) return fail('READ_FAILED', position.error);
-    const price = await getSharePrice(publicClient, address);
+    // Teller has no on-chain convertToAssets/totalAssets (only deposit/redeem) — sharePrice comes
+    // from the same USYC price lookup above, and totalAssets (fund-wide AUM) isn't published by
+    // Hashnote's price API; it's audit-only (nothing evaluates it), so 0n is a documented gap, not a
+    // silent wrong answer.
+    const price =
+      isTeller && usycPriceValue !== undefined
+        ? ok({ sharePrice: usycPriceValue, shareDecimals: 6, totalAssets: 0n })
+        : await getSharePrice(publicClient, address);
     if (!price.ok) return fail('READ_FAILED', price.error);
     let code: string | undefined;
     try {

@@ -100,6 +100,7 @@ export async function registerJobs(deps: JobDeps): Promise<void> {
   const now = deps.now ?? (() => new Date());
   const breaker = new ServBreaker(db, now);
   const manager = getAddress(env.SPEND_PERMISSION_MANAGER_ADDRESS);
+  const usycAddress = getAddress(env.USYC_ADDRESS);
   const allowMainnet = env.THESAUROS_ALLOW_MAINNET;
 
   await registerConfirmJob({ boss, db, env, publicClient: deps.publicClient });
@@ -145,6 +146,7 @@ export async function registerJobs(deps: JobDeps): Promise<void> {
       receiptKey: deps.receiptKey,
       now,
       spendPermissionManagerAddress: manager,
+      usycAddress,
       allowMainnet,
       enqueueConfirm,
       priceAdapter: deps.priceAdapter,
@@ -250,6 +252,7 @@ export async function registerJobs(deps: JobDeps): Promise<void> {
           db,
           publicClient: deps.publicClient,
           spendPermissionManagerAddress: manager,
+          usycAddress,
           allowMainnet,
           now,
           priceAdapter: deps.priceAdapter,

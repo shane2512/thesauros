@@ -41,8 +41,35 @@ export type VaultPositionRead = {
 
 export async function getVaultPosition(
   publicClient: PublicClient,
-  args: { vault: Address; holder: Address },
+  args: { vault: Address; holder: Address } & (
+    | { kind?: 'erc4626' }
+    | {
+        /** D-024: a Teller-kind vault's shares live on the USYC token, not the Teller (`vault`). */
+        kind: 'usyc_teller';
+        shareToken: Address;
+        /** Assets per whole share, 6 decimals (from `getUsycPriceMicroUsd`) — Teller has no
+         * `convertToAssets` to read this from chain state. */
+        sharePriceMicroUsd: bigint;
+      }
+  ),
 ): Promise<Result<VaultPositionRead>> {
+  if (args.kind === 'usyc_teller') {
+    try {
+      const shares = await publicClient.readContract({
+        address: args.shareToken,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [args.holder],
+      });
+      // USYC and USDC both use 6 decimals (docs/VERIFY.md row 15) — a plain fixed-point multiply.
+      const assets = (shares * args.sharePriceMicroUsd) / 1_000_000n;
+      // USYC's own docs describe redemption as always-available, T+0 (docs/VERIFY.md row 15) — there
+      // is no maxWithdraw-style cap to read, so the full valued position is treated as redeemable.
+      return ok({ shares, assets, redeemableAssets: assets });
+    } catch (e) {
+      return err(`USYC position read failed: ${String(e)}`);
+    }
+  }
   try {
     const shares = await publicClient.readContract({
       address: args.vault,
@@ -67,6 +94,29 @@ export async function getVaultPosition(
     return ok({ shares, assets, redeemableAssets });
   } catch (e) {
     return err(`vault position read failed: ${String(e)}`);
+  }
+}
+
+/**
+ * D-024: USYC's price floats with accrued yield and isn't exposed on-chain by the Teller (only
+ * `deposit`/`redeem` exist — no `convertToAssets`). Circle publishes it via Hashnote's public price
+ * API instead (docs/VERIFY.md row 15, confirmed live). Testnet host; swap for mainnet if ever used
+ * there. Never throws — a network hiccup here should degrade the dashboard's valuation, not crash it.
+ */
+export async function getUsycPriceMicroUsd(
+  apiUrl = 'https://usyc.dev.hashnote.com/api/price',
+): Promise<Result<bigint>> {
+  try {
+    const res = await fetch(apiUrl);
+    if (!res.ok) return err(`USYC price API returned ${res.status}`);
+    const body = (await res.json()) as { data?: { price?: string } };
+    const price = body.data?.price;
+    if (!price || !/^\d+(\.\d+)?$/.test(price)) return err('USYC price API returned no price');
+    const [whole = '0', frac = ''] = price.split('.');
+    const microUsd = BigInt(whole) * 1_000_000n + BigInt((frac + '000000').slice(0, 6) || '0');
+    return ok(microUsd);
+  } catch (e) {
+    return err(`USYC price fetch failed: ${String(e)}`);
   }
 }
 

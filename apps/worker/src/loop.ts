@@ -139,6 +139,7 @@ export async function runIteration(
         db,
         publicClient: deps.publicClient,
         spendPermissionManagerAddress: deps.spendPermissionManagerAddress,
+        usycAddress: deps.usycAddress,
         allowMainnet: deps.allowMainnet,
         now: deps.now,
         priceAdapter: deps.priceAdapter,

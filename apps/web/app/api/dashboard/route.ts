@@ -10,7 +10,12 @@ import {
   listVaultRows,
 } from '@thesauros/db';
 import { getEnv, zPolicy, type Policy } from '@thesauros/shared';
-import { getBalances, getVaultPosition, publicClientFor } from '@thesauros/wallet';
+import {
+  getBalances,
+  getUsycPriceMicroUsd,
+  getVaultPosition,
+  publicClientFor,
+} from '@thesauros/wallet';
 import { requireWallet } from '@/lib/requireWallet';
 import { apiError } from '@/lib/apiError';
 import { toDecisionItem } from '@/lib/decisions';
@@ -52,13 +57,30 @@ export async function GET(): Promise<NextResponse> {
         agentUsdc: bal.value.agentUsdc.toString(),
       };
     }
+    // D-024: fetched once, not per vault — every usyc_teller-kind vault on Arc shares the one real
+    // USYC deployment, so there is exactly one price to look up regardless of how many vault rows
+    // reference it.
+    const usycPrice = vaultRows.some((v) => v.kind === 'usyc_teller')
+      ? await getUsycPriceMicroUsd()
+      : null;
     const positions = await Promise.all(
       vaultRows.map(async (v) => {
-        const pos = await getVaultPosition(publicClient, {
-          vault: getAddress(v.address),
-          holder: agentWalletAddress,
-        });
-        if (!pos.ok) return null;
+        const pos =
+          v.kind === 'usyc_teller'
+            ? usycPrice?.ok
+              ? await getVaultPosition(publicClient, {
+                  vault: getAddress(v.address),
+                  holder: agentWalletAddress,
+                  kind: 'usyc_teller',
+                  shareToken: getAddress(env.USYC_ADDRESS),
+                  sharePriceMicroUsd: usycPrice.value,
+                })
+              : null
+            : await getVaultPosition(publicClient, {
+                vault: getAddress(v.address),
+                holder: agentWalletAddress,
+              });
+        if (!pos || !pos.ok) return null;
         return {
           id: v.id,
           name: v.name,

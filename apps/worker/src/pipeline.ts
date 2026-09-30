@@ -52,6 +52,8 @@ export type PipelineDeps = {
   receiptKey: Uint8Array;
   now: () => Date;
   spendPermissionManagerAddress: Address;
+  /** D-024: the USYC token address, needed to read a usyc_teller-kind vault's position. */
+  usycAddress?: Address | undefined;
   allowMainnet: boolean;
   /** Hand the execution to the confirmer (pg-boss). Absent in tests that confirm inline. */
   enqueueConfirm?: (job: ConfirmRequest) => Promise<void>;
