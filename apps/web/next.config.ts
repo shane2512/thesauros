@@ -12,10 +12,11 @@ process.env.NEXT_PUBLIC_DEMO_MODE ??= process.env.DEMO_MODE;
 
 const config: NextConfig = {
   devIndicators: false,
-  ...(process.env.VERCEL
+  ...(process.env.VERCEL || process.env.RENDER
     ? {
         // Without this, Next's output file tracer only walks apps/web's own tree and misses
-        // packages that live in the pnpm workspace root's node_modules/.pnpm store.
+        // packages that live in the pnpm workspace root's node_modules/.pnpm store. Render sets
+        // RENDER=true in every build/runtime environment, same idea as Vercel's own VERCEL flag.
         outputFileTracingRoot: fileURLToPath(new URL('../..', import.meta.url)),
       }
     : {}),
