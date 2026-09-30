@@ -4,6 +4,11 @@
 // multi-chain connector switching or contract-write UI to justify the extra dependency.
 export type Eip1193Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  isMetaMask?: boolean;
+  /** Populated by MetaMask (and several other wallets) when more than one wallet extension is
+   * installed — the single `window.ethereum` slot otherwise goes to whichever extension injected
+   * last, which is often Coinbase Wallet even when MetaMask is the one actually intended. */
+  providers?: Eip1193Provider[];
 };
 
 declare global {
@@ -16,7 +21,12 @@ export function getInjectedProvider(): Eip1193Provider {
   if (typeof window === 'undefined' || !window.ethereum) {
     throw new Error('No injected wallet found (install MetaMask or a compatible wallet)');
   }
-  return window.ethereum;
+  const eth = window.ethereum;
+  // Prefer MetaMask specifically when multiple extensions are present, rather than whichever one
+  // happened to claim window.ethereum. Falls back to window.ethereum itself for a single-wallet
+  // browser, or one whose provider doesn't announce a `providers` array at all.
+  const metaMask = eth.providers?.find((p) => p.isMetaMask);
+  return metaMask ?? eth;
 }
 
 export async function connectAddress(): Promise<string> {
