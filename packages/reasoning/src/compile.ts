@@ -177,7 +177,13 @@ export function toDraft(out: ServMandate, binding: TemplateBinding): Record<stri
       address: v.address,
       asset: binding.usdcAddress,
       kind: v.kind,
-      maxAllocationBps: vaultBps.get(v.id) ?? v.maxAllocationBps,
+      // `ServMandate.vaults[].maxAllocationBps` is a required number (no schema-level "the mandate
+      // doesn't say" sentinel the way optionalDecimal string fields have) — a vault the mandate text
+      // never mentions still gets a forced guess from the model, and it guesses 0. Treating 0 as
+      // "unspecified" (same convention scheduleDayOfMonth already uses below) keeps the vault's own
+      // signed allocation (set when it was added, via /api/policy/vaults) authoritative instead of
+      // silently zeroing it out — the same class of bug fixed for recipients' maxPerTxUsdc.
+      maxAllocationBps: vaultBps.get(v.id) || v.maxAllocationBps,
     })),
     recipients: binding.recipients.map((r) => {
       const row = recipientRow.get(r.id);
