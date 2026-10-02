@@ -19,7 +19,7 @@ export const TABS: readonly { href: string; label: string; icon: IconComponent }
 export const isActiveTab = (pathname: string, href: string): boolean =>
   href === '/app' ? pathname === '/app' : pathname === href || pathname.startsWith(`${href}/`);
 
-/** Mobile: frosted bottom tab bar, the active icon sits in a yellow pill. Desktop (lg): a left rail. */
+/** Mobile: frosted bottom tab bar, the active icon sits in a orange pill. Desktop (lg): a left rail. */
 export function TabBar({ pending }: { pending: number }) {
   const pathname = usePathname();
   return (

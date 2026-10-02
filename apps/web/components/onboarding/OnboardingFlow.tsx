@@ -15,7 +15,7 @@ import { MandateStep, MeetStep, WalletStep } from './steps';
 
 const TOTAL_STEPS = 4;
 
-/** Back arrow, a segmented progress rail (done = ink, current = yellow), "Step n of 4". Reached
+/** Back arrow, a segmented progress rail (done = ink, current = orange), "Step n of 4". Reached
  * segments are buttons back to that step. */
 export function StepProgress({
   current,

@@ -6,10 +6,10 @@
 <title>Thesauros — The Self-Driving Treasury That Can't Run Off With The Money</title>
 <!-- Tailwind CSS CDN with plugins -->
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<!-- Google Fonts: UnifrakturMaguntia / Pirata One for Gothic Emblem & Plus Jakarta Sans / Inter for UI -->
+<!-- Google Fonts: Plus Jakarta Sans for UI. The Sukajan Brush display face is self-hosted below. -->
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&amp;family=Pirata+One&amp;family=UnifrakturCook:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <!-- Lucide Icons -->
 <script src="https://unpkg.com/lucide@latest"></script>
 <script data-purpose="tailwind-config">
@@ -18,8 +18,8 @@
         extend: {
           colors: {
             brand: {
-              yellow: '#FCE300',
-              yellowHover: '#E5CE00',
+              accent: '#FF8A2B',
+              accentHover: '#E87710',
               dark: '#0A0A0A',
               cardDark: '#121212',
               slate: '#1A1A1A',
@@ -31,17 +31,26 @@
           },
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            gothic: ['"UnifrakturCook"', '"Pirata One"', 'cursive', 'serif'],
           }
         }
       }
     }
   </script>
 <style data-purpose="custom-typography">
-    .font-brand-blackletter {
-      font-family: 'UnifrakturCook', 'Pirata One', serif;
-      letter-spacing: -0.02em;
+    @font-face {
+      font-family: 'Sukajan Brush';
+      src: url('/fonts/sukajan-brush.otf') format('opentype');
+      font-display: swap;
     }
+    .font-brand-display {
+      font-family: 'Sukajan Brush', sans-serif;
+      letter-spacing: 0.02em;
+      font-weight: 400 !important;
+      font-synthesis: none;
+    }
+    /* The brush face is wide and caps-only: size by viewport so the wordmark never overflows. */
+    .hero-wordmark { font-size: min(8rem, 15vw); }
+    .outro-wordmark { font-size: min(11rem, 15vw); }
     .custom-phone-shadow {
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 10px #1e1e1e, 0 0 0 12px #2f2f2f;
     }
@@ -100,23 +109,23 @@
     }
   </style>
 </head>
-<body class="bg-black text-white font-sans antialiased selection:bg-brand-yellow selection:text-black min-h-dvh">
+<body class="bg-black text-white font-sans antialiased selection:bg-brand-accent selection:text-black min-h-dvh">
 <!-- BEGIN: MainHeader -->
 <header class="w-full bg-[#111111] border-b border-neutral-900 sticky top-0 z-50 px-4 py-3" data-purpose="top-navigation">
 <div class="max-w-6xl mx-auto flex items-center justify-between">
 <!-- Logo & Brand Badge -->
 <a class="flex items-center space-x-3 group" href="/">
-<div class="w-9 h-9 bg-brand-yellow text-black flex items-center justify-center rounded-lg shadow-sm font-brand-blackletter text-2xl font-bold group-hover:scale-105 transition-transform duration-200">
+<div class="w-9 h-9 bg-brand-accent text-black flex items-center justify-center rounded-lg shadow-sm font-brand-display text-2xl font-bold group-hover:scale-105 transition-transform duration-200">
           T
         </div>
 </a>
 <!-- Navigation Links -->
 <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-neutral-300">
-<a class="hover:text-brand-yellow transition-colors duration-200" href="#product">Product</a>
+<a class="hover:text-brand-accent transition-colors duration-200" href="#product">Product</a>
 </nav>
 <!-- CTA Button -->
 <div>
-<a class="inline-flex items-center justify-center bg-brand-yellow text-black text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full hover:bg-brand-yellowHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(254,222,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer" href="/connect">
+<a class="inline-flex items-center justify-center bg-brand-accent text-black text-xs sm:text-sm font-bold px-5 py-2.5 rounded-full hover:bg-brand-accentHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(255,138,43,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer" href="/connect">
           Connect Wallet
         </a>
 </div>
@@ -127,7 +136,7 @@
 <section class="relative bg-white text-black pt-16 pb-0 overflow-hidden" data-purpose="hero-banner">
 <div class="max-w-4xl mx-auto px-4 text-center">
 <!-- Gothic Wordmark -->
-<h1 class="font-brand-blackletter text-7xl sm:text-8xl md:text-9xl tracking-tight leading-none text-black select-none reveal-fade-up">
+<h1 class="font-brand-display hero-wordmark leading-none text-black select-none reveal-fade-up">
         Thesauros
       </h1>
 <!-- Slogan -->
@@ -158,7 +167,7 @@
 <!-- In-App Header -->
 <div class="flex items-center justify-between mt-2 px-2">
 <div class="flex items-center space-x-2 bg-neutral-900/90 py-1 px-3 rounded-full border border-neutral-800">
-<div class="w-5 h-5 bg-brand-yellow text-black text-[11px] font-bold rounded-full flex items-center justify-center font-brand-blackletter">T</div>
+<div class="w-5 h-5 bg-brand-accent text-black text-[11px] font-bold rounded-full flex items-center justify-center font-brand-display">T</div>
 <span class="text-xs font-semibold text-neutral-200">Treasury</span>
 <i class="w-3.5 h-3.5 text-neutral-400" data-lucide="chevron-down"></i>
 </div>
@@ -214,7 +223,7 @@
 <div class="mt-6 bg-[#161616] rounded-2xl p-3 border border-neutral-800/80 mb-2">
 <div class="flex justify-between items-center text-xs font-semibold text-neutral-400 mb-2 px-1">
 <span>Positions <span class="text-neutral-500 font-normal">$8,100.00</span></span>
-<a class="text-brand-yellow text-[11px] hover:underline flex items-center transition-colors duration-200" href="/app">View all <i class="w-3 h-3 ml-0.5" data-lucide="chevron-right"></i></a>
+<a class="text-brand-accent text-[11px] hover:underline flex items-center transition-colors duration-200" href="/app">View all <i class="w-3 h-3 ml-0.5" data-lucide="chevron-right"></i></a>
 </div>
 <!-- Token item -->
 <div class="flex items-center justify-between py-1.5 px-1 rounded-lg hover:bg-neutral-900/60 transition-colors duration-200 cursor-pointer">
@@ -236,8 +245,8 @@
 </div>
 </div>
 </div>
-<!-- Stats Yellow Ticker Banner -->
-<div class="bg-brand-yellow text-black pt-28 pb-8 px-4" data-purpose="metrics-ticker">
+<!-- Stats Orange Ticker Banner -->
+<div class="bg-brand-accent text-black pt-28 pb-8 px-4" data-purpose="metrics-ticker">
 <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 text-center font-bold items-center divide-y md:divide-y-0 md:divide-x divide-black/20">
 <div class="flex flex-col items-center justify-center pt-2 md:pt-0 group cursor-default reveal-fade-up delay-100">
 <div class="text-3xl sm:text-4xl font-extrabold flex items-center tracking-tight group-hover:scale-105 transition-transform duration-200">
@@ -282,27 +291,27 @@
             </p>
 </div>
 </div>
-<!-- Tile 2: Yellow 3D Thesauros Crest -->
-<div class="group bg-brand-yellow p-8 sm:p-12 flex items-center justify-center min-h-[260px] border-b border-black md:border-b-0 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl relative z-0 hover:z-10 cursor-pointer reveal-fade-up delay-200">
-<div class="relative w-44 h-44 rounded-3xl bg-gradient-to-br from-[#FFEC42] to-[#D6BD00] border-4 border-yellow-600/30 flex items-center justify-center shadow-2xl transform rotate-2 group-hover:rotate-0 group-hover:scale-105 transition duration-300">
+<!-- Tile 2: Orange 3D Thesauros Crest -->
+<div class="group bg-brand-accent p-8 sm:p-12 flex items-center justify-center min-h-[260px] border-b border-black md:border-b-0 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl relative z-0 hover:z-10 cursor-pointer reveal-fade-up delay-200">
+<div class="relative w-44 h-44 rounded-3xl bg-gradient-to-br from-[#FFB070] to-[#E8700F] border-4 border-orange-700/30 flex items-center justify-center shadow-2xl transform rotate-2 group-hover:rotate-0 group-hover:scale-105 transition duration-300">
 <!-- Inner Bevel Crest -->
-<div class="w-36 h-36 border-2 border-dashed border-black/30 rounded-2xl flex items-center justify-center bg-brand-yellow/60 group-hover:bg-brand-yellow/80 transition-colors duration-300">
-<span class="font-brand-blackletter text-7xl font-bold text-black drop-shadow-md group-hover:scale-105 transition-transform duration-300">T</span>
+<div class="w-36 h-36 border-2 border-dashed border-black/30 rounded-2xl flex items-center justify-center bg-brand-accent/60 group-hover:bg-brand-accent/80 transition-colors duration-300">
+<span class="font-brand-display text-7xl font-bold text-black drop-shadow-md group-hover:scale-105 transition-transform duration-300">T</span>
 </div>
 </div>
 </div>
-<!-- Tile 3: Yellow Graphic Keychain Card -->
-<div class="group bg-brand-yellow p-8 sm:p-12 flex items-center justify-center min-h-[260px] border-b md:border-b-0 md:border-r border-black transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl relative z-0 hover:z-10 cursor-pointer reveal-fade-up delay-150">
+<!-- Tile 3: Orange Graphic Keychain Card -->
+<div class="group bg-brand-accent p-8 sm:p-12 flex items-center justify-center min-h-[260px] border-b md:border-b-0 md:border-r border-black transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl relative z-0 hover:z-10 cursor-pointer reveal-fade-up delay-150">
 <div class="relative flex items-center justify-center space-x-2 group-hover:scale-105 transition-transform duration-300">
 <!-- Keychain Ring -->
 <div class="w-20 h-20 rounded-full border-4 border-black flex items-center justify-center transition-transform duration-300 group-hover:-rotate-6">
 <div class="w-14 h-14 rounded-full border-2 border-black"></div>
 </div>
 <!-- Key fob -->
-<div class="w-10 h-28 bg-black rounded-lg transform -rotate-12 group-hover:-rotate-6 flex flex-col items-center justify-between p-2 text-brand-yellow shadow-lg transition-transform duration-300">
-<div class="w-3 h-3 rounded-full bg-brand-yellow"></div>
-<span class="font-brand-blackletter text-xl font-bold">T</span>
-<div class="w-4 h-1 bg-brand-yellow rounded-full"></div>
+<div class="w-10 h-28 bg-black rounded-lg transform -rotate-12 group-hover:-rotate-6 flex flex-col items-center justify-between p-2 text-brand-accent shadow-lg transition-transform duration-300">
+<div class="w-3 h-3 rounded-full bg-brand-accent"></div>
+<span class="font-brand-display text-xl font-bold">T</span>
+<div class="w-4 h-1 bg-brand-accent rounded-full"></div>
 </div>
 <!-- Vintage Key -->
 <div class="w-8 h-28 flex flex-col items-center transform rotate-12 group-hover:rotate-6 transition-transform duration-300">
@@ -347,7 +356,7 @@
             </p>
 </div>
 <div class="flex flex-wrap gap-3 mt-8">
-<button class="bg-brand-yellow text-black font-bold text-xs uppercase px-5 py-2.5 rounded-full hover:bg-brand-yellowHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(254,222,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer">
+<button class="bg-brand-accent text-black font-bold text-xs uppercase px-5 py-2.5 rounded-full hover:bg-brand-accentHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(255,138,43,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer">
               See the vaults
             </button>
 <button class="border border-neutral-300 text-neutral-800 font-bold text-xs uppercase px-5 py-2.5 rounded-full hover:bg-neutral-100 hover:border-neutral-400 hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer">
@@ -379,10 +388,10 @@
 <div class="text-[10px] text-neutral-400">You receive</div>
 <div class="flex justify-between items-center mt-1">
 <span class="text-sm font-bold">3,000</span>
-<span class="text-[11px] bg-brand-yellow text-black px-2 py-0.5 rounded font-bold">aUSDC</span>
+<span class="text-[11px] bg-brand-accent text-black px-2 py-0.5 rounded font-bold">aUSDC</span>
 </div>
 </div>
-<button class="w-full mt-3 bg-brand-yellow text-black text-xs font-bold py-2 rounded-xl hover:bg-brand-yellowHover hover:brightness-105 active:scale-95 transition duration-200">Deposit</button>
+<button class="w-full mt-3 bg-brand-accent text-black text-xs font-bold py-2 rounded-xl hover:bg-brand-accentHover hover:brightness-105 active:scale-95 transition duration-200">Deposit</button>
 </div>
 </div>
 </div>
@@ -398,7 +407,7 @@
 <div class="mt-2 space-y-1.5">
 <div class="bg-neutral-900/90 p-2 rounded-lg flex items-center justify-between text-xs border border-neutral-800 hover:border-neutral-700 transition-colors duration-200">
 <div class="flex items-center space-x-2">
-<div class="w-4 h-4 bg-brand-yellow rounded-full"></div>
+<div class="w-4 h-4 bg-brand-accent rounded-full"></div>
 <span class="font-bold">USYC</span>
 </div>
 <span class="text-neutral-400 font-mono text-[10px]">8,100</span>
@@ -426,7 +435,7 @@
             </p>
 </div>
 <div class="mt-8">
-<button class="bg-brand-yellow text-black font-bold text-xs uppercase px-6 py-2.5 rounded-full hover:bg-brand-yellowHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(254,222,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer">
+<button class="bg-brand-accent text-black font-bold text-xs uppercase px-6 py-2.5 rounded-full hover:bg-brand-accentHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(255,138,43,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer">
               See the freeze flow
             </button>
 </div>
@@ -450,10 +459,10 @@
       </h2>
 <!-- 3 Feature Columns -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-<!-- Card 1: Black, yellow icon -->
+<!-- Card 1: Black, orange icon -->
 <div class="group flex flex-col text-center p-3 rounded-3xl transition duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl cursor-pointer reveal-fade-up delay-100">
 <div class="bg-black rounded-2xl h-48 flex items-center justify-center shadow-sm">
-<div class="w-20 h-20 bg-brand-yellow rounded-2xl flex items-center justify-center shadow-lg transform -rotate-6 group-hover:rotate-0 group-hover:scale-110 transition-transform duration-300">
+<div class="w-20 h-20 bg-brand-accent rounded-2xl flex items-center justify-center shadow-lg transform -rotate-6 group-hover:rotate-0 group-hover:scale-110 transition-transform duration-300">
 <i class="w-9 h-9 text-black transition-transform duration-300 group-hover:scale-105" data-lucide="send"></i>
 </div>
 </div>
@@ -466,7 +475,7 @@
 <div class="group flex flex-col text-center p-3 rounded-3xl transition duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl cursor-pointer reveal-fade-up delay-200">
 <div class="bg-neutral-100 border border-neutral-200 rounded-2xl h-48 flex items-center justify-center shadow-sm">
 <div class="w-20 h-20 bg-black rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-<div class="w-9 h-9 bg-brand-yellow rounded-lg rotate-45 flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
+<div class="w-9 h-9 bg-brand-accent rounded-lg rotate-45 flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
 <div class="w-4 h-4 bg-black rounded-full"></div>
 </div>
 </div>
@@ -476,11 +485,11 @@
 <h3 class="text-base font-extrabold mt-1">Policy checks<br/>every proposal</h3>
 </div>
 </div>
-<!-- Card 3: Yellow, black icon -->
+<!-- Card 3: Orange, black icon -->
 <div class="group flex flex-col text-center p-3 rounded-3xl transition duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl cursor-pointer reveal-fade-up delay-300">
-<div class="bg-brand-yellow rounded-2xl h-48 flex items-center justify-center shadow-sm">
+<div class="bg-brand-accent rounded-2xl h-48 flex items-center justify-center shadow-sm">
 <div class="w-20 h-20 bg-black rounded-2xl flex items-center justify-center shadow-lg transform rotate-6 group-hover:rotate-0 group-hover:scale-110 transition-transform duration-300">
-<i class="w-9 h-9 text-brand-yellow transition-transform duration-300 group-hover:scale-105" data-lucide="globe"></i>
+<i class="w-9 h-9 text-brand-accent transition-transform duration-300 group-hover:scale-105" data-lucide="globe"></i>
 </div>
 </div>
 <div class="mt-4">
@@ -494,7 +503,7 @@
 <div class="flex items-center space-x-1.5 mb-6">
 <div class="w-2 h-2 rounded-full bg-black hover:scale-125 transition-transform duration-200 cursor-pointer"></div>
 <div class="w-2 h-2 rounded-full bg-neutral-300 hover:scale-125 transition-transform duration-200 cursor-pointer"></div>
-<div class="w-4 h-2 rounded-full bg-brand-yellow hover:scale-110 transition-transform duration-200 cursor-pointer"></div>
+<div class="w-4 h-2 rounded-full bg-brand-accent hover:scale-110 transition-transform duration-200 cursor-pointer"></div>
 </div>
 <a class="bg-black text-white hover:bg-neutral-800 text-xs uppercase font-extrabold tracking-wider px-8 py-3 rounded-full hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out shadow-md hover:shadow-lg cursor-pointer" href="/demo">
           See the demo
@@ -504,7 +513,7 @@
 </section>
 <!-- END: ThreePillarFeaturesSection -->
 <!-- BEGIN: SupportSection -->
-<section class="bg-brand-yellow text-black py-20 px-4" data-purpose="human-support">
+<section class="bg-brand-accent text-black py-20 px-4" data-purpose="human-support">
 <div class="max-w-3xl mx-auto text-center">
 <!-- 08:00 Badge -->
 <div class="inline-block border border-black/40 px-3.5 py-1 rounded-full text-xs font-bold tracking-widest uppercase mb-6 hover:bg-black/10 transition-colors duration-200 cursor-default reveal-fade-up">
@@ -548,10 +557,10 @@
 <!-- Evidence Cards -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 <!-- Card 1 -->
-<div class="bg-brand-yellow text-black p-5 rounded-2xl flex flex-col justify-between shadow-lg transform md:-rotate-1 hover:rotate-0 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:brightness-105 cursor-pointer reveal-fade-up delay-100">
+<div class="bg-brand-accent text-black p-5 rounded-2xl flex flex-col justify-between shadow-lg transform md:-rotate-1 hover:rotate-0 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:brightness-105 cursor-pointer reveal-fade-up delay-100">
 <div>
 <div class="flex items-center space-x-2 mb-3">
-<div class="w-8 h-8 rounded-full bg-neutral-900 text-brand-yellow font-bold flex items-center justify-center text-xs">
+<div class="w-8 h-8 rounded-full bg-neutral-900 text-brand-accent font-bold flex items-center justify-center text-xs">
                 10
               </div>
 <div>
@@ -565,11 +574,11 @@
 </div>
 <div class="text-[10px] text-neutral-600 font-mono mt-4">GUARANTEE · RE-RUN LIVE: pnpm test:adversarial</div>
 </div>
-<!-- Card 2 (Featured Yellow Card) -->
-<div class="bg-brand-yellow text-black p-5 rounded-2xl flex flex-col justify-between shadow-xl ring-2 ring-brand-yellow/60 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:brightness-105 cursor-pointer reveal-fade-up delay-200">
+<!-- Card 2 (Featured Orange Card) -->
+<div class="bg-brand-accent text-black p-5 rounded-2xl flex flex-col justify-between shadow-xl ring-2 ring-brand-accent/60 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:brightness-105 cursor-pointer reveal-fade-up delay-200">
 <div>
 <div class="flex items-center space-x-2 mb-3">
-<div class="w-8 h-8 rounded-full bg-black text-brand-yellow font-bold flex items-center justify-center text-xs">
+<div class="w-8 h-8 rounded-full bg-black text-brand-accent font-bold flex items-center justify-center text-xs">
                 R
               </div>
 <div>
@@ -584,10 +593,10 @@
 <div class="text-[10px] text-neutral-600 font-mono mt-4">PROVEN, NOT ARGUED</div>
 </div>
 <!-- Card 3 -->
-<div class="bg-brand-yellow text-black p-5 rounded-2xl flex flex-col justify-between shadow-lg transform md:rotate-1 hover:rotate-0 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:brightness-105 cursor-pointer reveal-fade-up delay-300">
+<div class="bg-brand-accent text-black p-5 rounded-2xl flex flex-col justify-between shadow-lg transform md:rotate-1 hover:rotate-0 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:brightness-105 cursor-pointer reveal-fade-up delay-300">
 <div>
 <div class="flex items-center space-x-2 mb-3">
-<div class="w-8 h-8 rounded-full bg-neutral-900 text-brand-yellow font-bold flex items-center justify-center text-xs">
+<div class="w-8 h-8 rounded-full bg-neutral-900 text-brand-accent font-bold flex items-center justify-center text-xs">
                 100
               </div>
 <div>
@@ -624,7 +633,7 @@
 <!-- Ripple wave lines -->
 <div class="absolute inset-0 bg-gradient-to-r from-black/5 via-transparent to-black/10"></div>
 <!-- Gothic Thesauros 'S' on Flag -->
-<span class="font-brand-blackletter text-7xl font-bold text-black select-none transform rotate-3 group-hover:rotate-0 drop-shadow transition-transform duration-300">
+<span class="font-brand-display text-7xl font-bold text-black select-none transform rotate-3 group-hover:rotate-0 drop-shadow transition-transform duration-300">
               T
             </span>
 </div>
@@ -646,16 +655,16 @@
 <h3 class="text-2xl sm:text-3xl font-extrabold tracking-tight max-w-xs">
             Thesauros: the self-driving treasury
           </h3>
-<!-- Thesauros Yellow Shield Monogram Icon -->
-<div class="w-20 h-20 bg-brand-yellow text-black rounded-2xl flex items-center justify-center shadow-lg font-brand-blackletter text-5xl font-black hover:scale-105 transition-transform duration-200 cursor-default">
+<!-- Thesauros Orange Shield Monogram Icon -->
+<div class="w-20 h-20 bg-brand-accent text-black rounded-2xl flex items-center justify-center shadow-lg font-brand-display text-5xl font-black hover:scale-105 transition-transform duration-200 cursor-default">
             T
           </div>
 <!-- Buttons -->
 <div class="flex flex-wrap gap-3 pt-2">
-<a class="bg-brand-yellow text-black font-bold text-xs uppercase px-5 py-2.5 rounded-full hover:bg-brand-yellowHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(254,222,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer" href="/connect">
+<a class="bg-brand-accent text-black font-bold text-xs uppercase px-5 py-2.5 rounded-full hover:bg-brand-accentHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(255,138,43,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer" href="/connect">
               Connect wallet
             </a>
-<a class="bg-brand-yellow text-black font-bold text-xs uppercase px-5 py-2.5 rounded-full hover:bg-brand-yellowHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(254,222,0,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer" href="#proof">
+<a class="bg-brand-accent text-black font-bold text-xs uppercase px-5 py-2.5 rounded-full hover:bg-brand-accentHover hover:brightness-105 hover:shadow-[0_6px_20px_rgba(255,138,43,0.45)] hover:-translate-y-0.5 active:translate-y-0 transition duration-200 ease-out cursor-pointer" href="#proof">
               View proof
             </a>
 </div>
@@ -674,22 +683,22 @@
 <div>
 <span class="text-xs font-bold text-neutral-500 uppercase tracking-widest block mb-4">Product</span>
 <ul class="space-y-3 text-sm font-semibold text-neutral-300">
-<li><a class="hover:text-brand-yellow transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#overview">Overview <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-yellow group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
-<li><a class="hover:text-brand-yellow transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#features">Essential features <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-yellow group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
-<li><a class="hover:text-brand-yellow transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#security">Security <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-yellow group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
-<li><a class="hover:text-brand-yellow transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#proof">Safety proof <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-yellow group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
-<li><a class="hover:text-brand-yellow transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="/demo">Demo <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-yellow group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
+<li><a class="hover:text-brand-accent transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#overview">Overview <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-accent group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
+<li><a class="hover:text-brand-accent transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#features">Essential features <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-accent group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
+<li><a class="hover:text-brand-accent transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#security">Security <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-accent group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
+<li><a class="hover:text-brand-accent transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="#proof">Safety proof <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-accent group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
+<li><a class="hover:text-brand-accent transition-colors duration-200 flex justify-between items-center py-1 border-b border-neutral-900 group" href="/demo">Demo <i class="w-3.5 h-3.5 text-neutral-600 group-hover:text-brand-accent group-hover:translate-x-0.5 transition duration-200" data-lucide="chevron-right"></i></a></li>
 </ul>
 </div>
 </div>
 </div>
 </div>
 </div>
-<!-- Massive Bold Yellow Bottom Banner -->
-<div class="bg-brand-yellow text-black pt-16 pb-10 px-4 text-center" data-purpose="giant-brand-outro">
+<!-- Massive Bold Orange Bottom Banner -->
+<div class="bg-brand-accent text-black pt-16 pb-10 px-4 text-center" data-purpose="giant-brand-outro">
 <div class="max-w-5xl mx-auto reveal-fade-up">
 <!-- Giant Gothic Brand Wordmark -->
-<h2 class="font-brand-blackletter text-7xl sm:text-9xl md:text-[13rem] leading-none tracking-tight select-none">
+<h2 class="font-brand-display outro-wordmark leading-none select-none">
           Thesauros
         </h2>
 <!-- Creed text -->

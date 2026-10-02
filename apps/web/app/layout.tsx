@@ -1,23 +1,16 @@
 import type { ReactNode } from 'react';
-import { Geist_Mono, Plus_Jakarta_Sans, UnifrakturCook } from 'next/font/google';
+import { Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import type { Metadata } from 'next';
 import { Providers } from '@/components/Providers';
 import './globals.css';
 
 // The landing page's own pairing: Plus Jakarta Sans for everything, Geist Mono only for machine
-// data (addresses, hashes, tx ids). UnifrakturCook is the brand's blackletter, used for the
-// wordmark and nothing else — the same mark the landing page carries.
+// data (addresses, hashes, tx ids). Sukajan Brush (capitals only, no digits) is the brand's
+// display face, used for the wordmark and nothing else — the same mark the landing page carries.
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-jakarta',
-});
-
-const blackletter = UnifrakturCook({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: '700',
-  variable: '--font-unifraktur',
 });
 
 const geistMono = Geist_Mono({
@@ -34,10 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${plusJakartaSans.variable} ${blackletter.variable} ${geistMono.variable}`}
-    >
+    <html lang="en" className={`${plusJakartaSans.variable} ${geistMono.variable}`}>
       <body className="min-h-dvh bg-ground font-sans text-body text-ink antialiased">
         <a
           href="#main"

@@ -358,6 +358,25 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-026 — Brand refresh: orange accent and Sukajan Brush display face (supersedes the yellow + blackletter identity in D-020/D-024)
+
+The accent is now orange `#FF8A2B` (was yellow `#FCE300`) and the wordmark/logo "T" use the Sukajan
+Brush display face (was UnifrakturCook blackletter). Still filled surfaces only, never text on a
+light canvas: light mode uses burnt orange `#B34700` for text/links (5.2:1 on the ground), dark mode
+`#FFB070`; dark ink `#1F1004` on orange fills is 7.9:1. Verdict colours (allow/escalate/deny) are
+unchanged, and orange was chosen over green precisely so the brand colour never reads as the
+"allowed" signal. Body text stays Plus Jakarta Sans, machine data Geist Mono.
+
+- The font file (`apps/web/public/fonts/sukajan-brush.otf`) is the author's **demo**, licensed for
+  personal use only, and contains capitals only with **no digits or symbols** (they draw blank). It is
+  therefore used for the wordmark and large landing headlines only — never for amounts or numbers.
+  Commercial/brand use needs the author's paid licence before this ships publicly.
+- Token names changed with the palette: landing `brand-yellow` → `brand-accent`,
+  `font-brand-blackletter` → `font-brand-display`, app `--font-blackletter` → `--font-brand`.
+- The logo SVGs, the logo PNG exports, and the three README images (`docs/assets/`) were rebuilt to
+  match. The README images are recoloured/overpainted from the previous yellow originals, not
+  regenerated from design source.
+
 ### D-024 — App UI replaced with the Stitch "Landing Page Recreation" screens
 
 The whole authenticated app (shell, dashboard, fund sheet, freeze modal, 4-step onboarding, activity,

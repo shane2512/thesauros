@@ -333,13 +333,13 @@ export function StatusPill({ state, label }: { state: PillState; label?: string 
   );
 }
 
-/** The brand: the blackletter T on yellow (brand/logo/thesauros-logo.svg, unchanged) and the
- * blackletter wordmark — the same identity the landing page carries. */
+/** The brand: the brush-lettered T on orange (public/logo/thesauros-logo.svg) and the brush
+ * wordmark — the same identity the landing page carries. */
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <img src="/logo/thesauros-logo.svg" alt="" width={28} height={28} className="size-7" />
-      <span className="font-blackletter text-section leading-none text-ink">Thesauros</span>
+      <span className="font-brand text-section leading-none text-ink">Thesauros</span>
     </span>
   );
 }

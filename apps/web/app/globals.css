@@ -1,9 +1,15 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Sukajan Brush';
+  src: url('/fonts/sukajan-brush.otf') format('opentype');
+  font-display: swap;
+}
+
 /* ===========================================================================
    Thesauros design tokens. Cool-grey ground (#f8f9fa), white cards on a hairline shadow, ink
-   #191c1d, and one brand yellow (#FCE300) used only for FILLED surfaces — buttons, badges, meter
-   fills, the active step — never as text on a light canvas, where yellow is illegible.
+   #191c1d, and one brand orange (#FF8A2B) used only for FILLED surfaces — buttons, badges, meter
+   fills, the active step — never as text on a light canvas (text uses burnt orange #B34700).
    Plus Jakarta Sans carries everything, headlines and money included; Geist Mono only
    machine data (addresses, hashes).
 
@@ -29,11 +35,11 @@
   --th-escalate-tint: #fdf0dc;
   --th-deny-tint: #ffdad6;
 
-  --th-accent: #fce300;
-  --th-accent-press: #e9d100;
-  --th-accent-soft: #fff6b3;
-  --th-on-accent: #191c1d;
-  --th-accent-ink: #191c1d;
+  --th-accent: #ff8a2b;
+  --th-accent-press: #e87710;
+  --th-accent-soft: #ffe9d6;
+  --th-on-accent: #1f1004;
+  --th-accent-ink: #b34700;
 
   --th-allow: #067a59;
   --th-allow-tint: #dcf3ea;
@@ -70,12 +76,12 @@
     --th-escalate-tint: #33260c;
     --th-deny-tint: #2e1210;
 
-    --th-accent: #fce300;
-    --th-accent-press: #e9d100;
-    --th-accent-soft: #3a3400;
-    --th-on-accent: #191c1d;
-    /* intentional asymmetry: yellow text is legible on black, illegible on white */
-    --th-accent-ink: #fce300;
+    --th-accent: #ff8a2b;
+    --th-accent-press: #e87710;
+    --th-accent-soft: #3a2108;
+    --th-on-accent: #1f1004;
+    /* lighter orange ink on dark grounds, burnt orange on light ones */
+    --th-accent-ink: #ffb070;
 
     --th-allow: #2fd9a6;
     --th-allow-tint: #0e2a21;
@@ -83,7 +89,7 @@
     --th-deny: #ff6a5e;
     --th-deny-fill: #d92d1e;
     --th-on-deny-fill: #ffffff;
-    --th-info: #fce300;
+    --th-info: #ffb070;
 
     --th-shadow-e1: 0 0 0 1px rgb(255 255 255 / 0.06);
     --th-shadow-e2: 0 -24px 48px -12px rgb(0 0 0 / 0.55);
@@ -112,11 +118,11 @@
   --th-escalate-tint: #fdf0dc;
   --th-deny-tint: #ffdad6;
 
-  --th-accent: #fce300;
-  --th-accent-press: #e9d100;
-  --th-accent-soft: #fff6b3;
-  --th-on-accent: #191c1d;
-  --th-accent-ink: #191c1d;
+  --th-accent: #ff8a2b;
+  --th-accent-press: #e87710;
+  --th-accent-soft: #ffe9d6;
+  --th-on-accent: #1f1004;
+  --th-accent-ink: #b34700;
 
   --th-allow: #067a59;
   --th-allow-tint: #dcf3ea;
@@ -151,12 +157,12 @@
   --th-escalate-tint: #33260c;
   --th-deny-tint: #2e1210;
 
-  --th-accent: #fce300;
-  --th-accent-press: #e9d100;
-  --th-accent-soft: #3a3400;
-  --th-on-accent: #191c1d;
-  /* intentional asymmetry: yellow text is legible on black, illegible on white */
-  --th-accent-ink: #fce300;
+  --th-accent: #ff8a2b;
+  --th-accent-press: #e87710;
+  --th-accent-soft: #3a2108;
+  --th-on-accent: #1f1004;
+  /* lighter orange ink on dark grounds, burnt orange on light ones */
+  --th-accent-ink: #ffb070;
 
   --th-allow: #2fd9a6;
   --th-allow-tint: #0e2a21;
@@ -164,7 +170,7 @@
   --th-deny: #ff6a5e;
   --th-deny-fill: #d92d1e;
   --th-on-deny-fill: #ffffff;
-  --th-info: #fce300;
+  --th-info: #ffb070;
 
   --th-shadow-e1: 0 0 0 1px rgb(255 255 255 / 0.06);
   --th-shadow-e2: 0 -24px 48px -12px rgb(0 0 0 / 0.55);
@@ -220,14 +226,14 @@
   --color-destructive-foreground: var(--th-on-deny-fill);
   --color-border: var(--th-line);
   --color-input: var(--th-line-strong);
-  /* accent-ink, not accent: a yellow ring is illegible on the white canvas */
+  /* accent-ink, not accent: an orange ring is illegible on the white canvas */
   --color-ring: var(--th-accent-ink);
   --color-success: var(--th-allow);
   --color-warning: var(--th-escalate);
 
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-blackletter: var(--font-unifraktur), 'Pirata One', serif;
+  --font-brand: 'Sukajan Brush', ui-sans-serif, sans-serif;
 
   /* type scale */
   --text-label: 0.6875rem; /* 11px */
