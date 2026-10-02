@@ -370,7 +370,9 @@ unchanged, and orange was chosen over green precisely so the brand colour never 
 - The font file (`apps/web/public/fonts/sukajan-brush.otf`) is the author's **demo**, licensed for
   personal use only, and contains capitals only with **no digits or symbols** (they draw blank). It is
   therefore used for the wordmark and large landing headlines only — never for amounts or numbers.
-  Commercial/brand use needs the author's paid licence before this ships publicly.
+  **Licence update (2026-10-03):** the author (tkzgraphic) granted permission to use the font for this
+  hackathon project, asking for a credit to tkzgraphic. The credit is in `README.md` (Credits) and
+  the landing-page footer. Commercial use beyond the hackathon still needs the paid licence.
 - Token names changed with the palette: landing `brand-yellow` → `brand-accent`,
   `font-brand-blackletter` → `font-brand-display`, app `--font-blackletter` → `--font-brand`.
 - The logo SVGs, the logo PNG exports, and the three README images (`docs/assets/`) were rebuilt to

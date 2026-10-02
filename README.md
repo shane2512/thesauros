@@ -195,4 +195,6 @@ Hosted by [Canteen](https://thecanteenapp.com), with [Circle](https://www.circle
 and [Arc](https://docs.arc.network) as the settlement chain. Reasoning is provided by
 [OpenServ](https://openserv.ai).
 
+Wordmark font: Sukajan Brush by tkzgraphic, used with the author's permission.
+
 Built by Shane Joans V.
