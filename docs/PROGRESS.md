@@ -358,6 +358,21 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-027 — One agent wallet per owner address, permanently (`agent_wallet_registry`)
+
+Wiping the database used to orphan an owner's Circle agent wallet: re-onboarding provisioned a brand-new
+wallet with a different address, which lost the USYC allowlisting Circle had granted to the original
+(an allowlist ticket takes 24–48h). `agent_wallet_registry` (owner address + chain id → agent wallet
+address and Circle ids) now records every provisioned wallet and has **no foreign keys**, so deleting or
+truncating `users`/`wallets` cannot touch it. Triggers make it append-only (UPDATE/DELETE/TRUNCATE raise).
+
+- `POST /api/wallet/provision` looks the owner up first and re-attaches the registered wallet without
+  calling Circle; only a first-time owner provisions, and a race on first provisioning converges on the
+  winner (`ON CONFLICT DO NOTHING` then re-read).
+- Migration `0004` backfills the registry from existing wallets (oldest wallet per owner and chain).
+- A wallet row's agent wallet was manually swapped back to the allowlisted one on the live database for
+  the project owner. The Circle wallet it replaced is not deleted and still holds its funds.
+
 ### D-026 — Brand refresh: orange accent and Sukajan Brush display face (supersedes the yellow + blackletter identity in D-020/D-024)
 
 The accent is now orange `#FF8A2B` (was yellow `#FCE300`) and the wordmark/logo "T" use the Sukajan

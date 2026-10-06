@@ -6,6 +6,7 @@ import { appendAudit } from './audit';
 import type { Db } from './client';
 import {
   agentDecisions,
+  agentWalletRegistry,
   approvals,
   auditLog,
   mandates,
@@ -685,6 +686,59 @@ export async function setAgentWallet(
       agentWalletRef: { walletSetId: args.walletSetId, circleWalletId: args.circleWalletId },
     })
     .where(eq(wallets.id, walletId));
+}
+
+export type RegisteredAgentWallet = {
+  address: string;
+  walletSetId: string;
+  circleWalletId: string;
+};
+
+/** The owner's permanent agent wallet on this chain, if one was ever provisioned. */
+export async function findRegisteredAgentWallet(
+  db: Db,
+  ownerAddress: string,
+  chainId: number,
+): Promise<RegisteredAgentWallet | undefined> {
+  const [row] = await db
+    .select()
+    .from(agentWalletRegistry)
+    .where(
+      and(
+        eq(agentWalletRegistry.ownerAddress, ownerAddress),
+        eq(agentWalletRegistry.chainId, chainId),
+      ),
+    )
+    .limit(1);
+  if (!row) return undefined;
+  const ref = row.agentWalletRef as { walletSetId: string; circleWalletId: string };
+  return {
+    address: row.agentWalletAddress,
+    walletSetId: ref.walletSetId,
+    circleWalletId: ref.circleWalletId,
+  };
+}
+
+/**
+ * Record a freshly provisioned agent wallet as the owner's permanent one. If another request won the
+ * race, the existing row is returned instead, so both callers converge on the same wallet.
+ */
+export async function registerAgentWallet(
+  db: Db,
+  ownerAddress: string,
+  chainId: number,
+  wallet: RegisteredAgentWallet,
+): Promise<RegisteredAgentWallet> {
+  await db
+    .insert(agentWalletRegistry)
+    .values({
+      ownerAddress,
+      chainId,
+      agentWalletAddress: wallet.address,
+      agentWalletRef: { walletSetId: wallet.walletSetId, circleWalletId: wallet.circleWalletId },
+    })
+    .onConflictDoNothing();
+  return (await findRegisteredAgentWallet(db, ownerAddress, chainId)) ?? wallet;
 }
 
 /** Set `wallets.frozen`, for the breaker and the owner path. */

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { setAgentWallet } from '@thesauros/db';
+import { findRegisteredAgentWallet, registerAgentWallet, setAgentWallet } from '@thesauros/db';
 import { getEnv } from '@thesauros/shared';
 import { createCircleClient, provisionTreasuryWallet } from '@thesauros/wallet';
 import { requireWallet } from '@/lib/requireWallet';
@@ -13,6 +13,18 @@ export async function POST(): Promise<NextResponse> {
       { error: 'this treasury already has a provisioned wallet' },
       { status: 409 },
     );
+  }
+
+  // One agent wallet per owner address and chain, permanently: a returning owner (even after their
+  // wallet row was deleted) gets their original Circle wallet back, never a fresh one.
+  const existing = await findRegisteredAgentWallet(db(), auth.ownerAddress, auth.wallet.chainId);
+  if (existing) {
+    await setAgentWallet(db(), auth.wallet.id, {
+      address: existing.address,
+      walletSetId: existing.walletSetId,
+      circleWalletId: existing.circleWalletId,
+    });
+    return NextResponse.json({ agentWalletAddress: existing.address });
   }
 
   const env = getEnv();
@@ -29,11 +41,16 @@ export async function POST(): Promise<NextResponse> {
   });
   if (!provisioned.ok) return NextResponse.json({ error: provisioned.error }, { status: 502 });
 
-  await setAgentWallet(db(), auth.wallet.id, {
+  const registered = await registerAgentWallet(db(), auth.ownerAddress, auth.wallet.chainId, {
     address: provisioned.value.address,
     walletSetId: provisioned.value.walletSetId,
     circleWalletId: provisioned.value.walletId,
   });
+  await setAgentWallet(db(), auth.wallet.id, {
+    address: registered.address,
+    walletSetId: registered.walletSetId,
+    circleWalletId: registered.circleWalletId,
+  });
 
-  return NextResponse.json({ agentWalletAddress: provisioned.value.address });
+  return NextResponse.json({ agentWalletAddress: registered.address });
 }

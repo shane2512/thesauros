@@ -113,6 +113,24 @@ export const wallets = pgTable(
   (t) => [check('wallets_chain_id_check', sql`${t.chainId} in (5042002, 5042)`)],
 );
 
+/**
+ * One agent wallet per owner address per chain, for good. Deliberately has NO foreign keys, so deleting
+ * or truncating `users`/`wallets` can never orphan it: a returning owner is handed back their original
+ * Circle wallet (and any USYC allowlisting on it) instead of getting a fresh, un-allowlisted one.
+ * Append-only: a trigger in the migration blocks UPDATE/DELETE/TRUNCATE.
+ */
+export const agentWalletRegistry = pgTable(
+  'agent_wallet_registry',
+  {
+    ownerAddress: text('owner_address').notNull(), // checksummed
+    chainId: integer('chain_id').notNull(),
+    agentWalletAddress: text('agent_wallet_address').notNull().unique(),
+    agentWalletRef: jsonb('agent_wallet_ref').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.ownerAddress, t.chainId] })],
+);
+
 export const mandates = pgTable('mandates', {
   id: id(),
   walletId: uuid('wallet_id')
