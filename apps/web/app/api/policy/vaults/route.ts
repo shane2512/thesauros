@@ -49,6 +49,13 @@ export async function POST(req: Request): Promise<NextResponse> {
   const kind = address === getAddress(env.USYC_TELLER_ADDRESS) ? 'usyc_teller' : 'erc4626';
   const session = await getSession();
 
+  // The policy compiler rejects a repeated vault address, so refuse it here, before the owner signs,
+  // instead of recording a duplicate that then blocks every later policy compile.
+  const already = (await listVaultRows(db(), auth.wallet.id)).some(
+    (v) => getAddress(v.address) === address,
+  );
+  if (already) return NextResponse.json({ error: 'this vault is already added' }, { status: 409 });
+
   if (!parsed.data.signature || !parsed.data.message) {
     const nonce = newNonce();
     const expiresAt = new Date(Date.now() + RECIPIENT_CONFIRMATION_TTL_MS);
@@ -76,6 +83,9 @@ export async function POST(req: Request): Promise<NextResponse> {
   if (!validSig) return NextResponse.json({ error: 'signature does not verify' }, { status: 401 });
 
   const existing = await listVaultRows(db(), auth.wallet.id);
+  if (existing.some((v) => getAddress(v.address) === address)) {
+    return NextResponse.json({ error: 'this vault is already added' }, { status: 409 });
+  }
   const id = `v${existing.length + 1}`;
 
   const inserted = await insertVault(db(), {
