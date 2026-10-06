@@ -6,9 +6,14 @@
 import { createPublicClient, getAddress, http, type PublicClient } from 'viem';
 import { z } from 'zod';
 import type { PgBoss } from 'pg-boss';
-import { confirmExecution, createCircleClient, type CircleClient } from '@thesauros/wallet';
-import { createLogger, type Env } from '@thesauros/shared';
-import type { Db } from '@thesauros/db';
+import {
+  confirmExecution,
+  createCircleClient,
+  type CircleClient,
+  type ConfirmOutcome,
+} from '@thesauros/wallet';
+import { createLogger, type Env, type Result } from '@thesauros/shared';
+import { updateExecution, type Db } from '@thesauros/db';
 import { arcTestnet } from '../runtime';
 
 export const EXEC_CONFIRM_QUEUE = 'exec.confirm';
@@ -36,6 +41,24 @@ export const zConfirmJob = z.object({
   counterpartyLabel: z.string().optional(),
 });
 export type ConfirmJob = z.infer<typeof zConfirmJob>;
+
+type ExecutionPatch = Parameters<typeof updateExecution>[2];
+
+/**
+ * What the execution row should say once the confirmer has spoken. `confirmExecution` only reads
+ * the chain; without writing this back, an agent-initiated execution stays `submitted` forever
+ * even after it landed (or reverted) on chain.
+ */
+export function confirmPatch(result: Result<ConfirmOutcome, string>, now: Date): ExecutionPatch {
+  if (!result.ok) return { status: 'timeout', error: result.error };
+  if (result.value.status !== 'confirmed')
+    return {
+      status: 'failed',
+      error: result.value.reason ?? 'the transaction did not confirm on chain',
+      ...(result.value.txHash ? { txHash: result.value.txHash } : {}),
+    };
+  return { status: 'confirmed', txHash: result.value.txHash, confirmedAt: now };
+}
 
 export function registerConfirmJob(deps: {
   boss: PgBoss;
@@ -95,6 +118,7 @@ export function registerConfirmJob(deps: {
             counterpartyLabel: d.counterpartyLabel,
           },
         );
+        await updateExecution(deps.db, d.executionId, confirmPatch(result, new Date()));
         if (!result.ok) {
           log.error({ executionId: d.executionId, error: result.error }, 'confirmer failed');
           throw new Error(result.error);
