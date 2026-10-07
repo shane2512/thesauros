@@ -128,14 +128,31 @@ export function buildCalls(
           'UNKNOWN_VAULT',
           `vaultId "${proposal.params.vaultId}" is not on the policy allowlist`,
         );
-      // D-024: Circle's real USYC Teller only documents deposit()/redeem() (a full share-based
-      // exit) — no by-asset-amount withdraw(). A partial withdrawal from a Teller-kind vault isn't
-      // buildable; risk_exit's full redeem() below still works for it.
-      if (vault.kind === 'usyc_teller')
-        return fail(
-          'NOT_IMPLEMENTED',
-          'partial vault_withdraw is not available for a Teller-backed vault (Circle exposes deposit/redeem only); use a full risk_exit instead',
-        );
+      // Circle's USYC Teller has no by-asset-amount withdraw(), only a share-based redeem(). A
+      // partial withdrawal therefore redeems the shares that are worth `amount` at the position's
+      // current redeemable value (rounded UP so the agent receives at least the amount; R11's vault
+      // tolerance absorbs the rounding). Shares come from the on-chain position read, never from
+      // the proposal, and are capped at what the agent holds.
+      if (vault.kind === 'usyc_teller') {
+        const position = ctx.vaultPositions[vault.id];
+        if (!position || position.shares <= 0n || position.redeemableAssets <= 0n)
+          return fail('NO_POSITION', `no shares held in vault "${vault.id}" to withdraw from`);
+        const { amount } = proposal.params;
+        const wanted =
+          (amount * position.shares + position.redeemableAssets - 1n) / position.redeemableAssets;
+        const shares = wanted > position.shares ? position.shares : wanted;
+        return ok([
+          {
+            to: vault.address,
+            data: encodeFunctionData({
+              abi: ERC4626_ABI,
+              functionName: 'redeem',
+              args: [shares, ctx.agentWalletAddress, ctx.agentWalletAddress],
+            }),
+            value: 0n,
+          },
+        ]);
+      }
       return ok([
         {
           to: vault.address,

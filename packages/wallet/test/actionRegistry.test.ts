@@ -120,6 +120,42 @@ describe('buildCalls', () => {
     ]);
   });
 
+  describe('vault_withdraw on a USYC Teller vault', () => {
+    const tellerPolicy = {
+      ...policy,
+      vaults: policy.vaults.map((v) => ({ ...v, kind: 'usyc_teller' as const })),
+    };
+    const redeemData = (shares: bigint) =>
+      encodeFunctionData({
+        abi: ERC4626_ABI,
+        functionName: 'redeem',
+        args: [shares, ctx.agentWalletAddress, ctx.agentWalletAddress],
+      });
+
+    it('redeems the shares worth the amount, rounded up, from the on-chain position', () => {
+      // 2_000_000 shares are worth 2_200_000 assets, so 1_000_000 assets is 909_090.9 -> 909_091 shares.
+      const r = buildCalls(proposals.withdraw, tellerPolicy, ctx);
+      expect(r.ok && r.value).toEqual([{ to: VAULT, data: redeemData(909_091n), value: 0n }]);
+    });
+
+    it('never redeems more shares than the agent holds', () => {
+      const greedy: Proposal = {
+        ...proposals.withdraw,
+        kind: 'vault_withdraw',
+        params: { vaultId: 'v1', amount: 9_000_000n },
+      };
+      const r = buildCalls(greedy, tellerPolicy, ctx);
+      expect(r.ok && r.value).toEqual([{ to: VAULT, data: redeemData(2_000_000n), value: 0n }]);
+    });
+
+    it('fails closed when there is no position to withdraw from', () => {
+      const r = buildCalls(proposals.withdraw, tellerPolicy, { ...ctx, vaultPositions: {} });
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.error.code).toBe('NO_POSITION');
+    });
+  });
+
   it('risk_exit redeems the WHOLE position, never a proposal-supplied amount', () => {
     const r = buildCalls(proposals.riskExit, policy, ctx);
     expect(r.ok).toBe(true);
