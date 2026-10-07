@@ -149,6 +149,21 @@ export async function getExecutionById(db: Db, id: string): Promise<ExecutionRow
   return (await db.select().from(executions).where(eq(executions.id, id)).limit(1))[0];
 }
 
+/** The wallet's most recent execution of any kind. */
+export async function latestExecutionForWallet(
+  db: Db,
+  walletId: string,
+): Promise<ExecutionRow | undefined> {
+  return (
+    await db
+      .select()
+      .from(executions)
+      .where(eq(executions.walletId, walletId))
+      .orderBy(desc(executions.createdAt))
+      .limit(1)
+  )[0];
+}
+
 /** The execution a decision produced, if it was ever sent (one per decision). */
 export async function getExecutionForDecision(
   db: Db,

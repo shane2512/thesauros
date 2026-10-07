@@ -58,6 +58,10 @@ export const SYSTEM_CEILINGS = {
    * USDC it holds, so a deposit of its whole balance is rejected as INSUFFICIENT_TOKEN (found live on
    * a 31.006638 USDC deposit). The observed cost of an approve plus a deposit was ~0.0094 USDC. */
   DEPOSIT_GAS_RESERVE_MICRO_USD: 100_000n,
+
+  /** After an execution fails the loop waits this long before acting for that wallet again, so a
+   * persistent failure cannot retry every minute and burn gas (five failed deposits did, live). */
+  EXECUTION_FAILURE_COOLDOWN_SEC: 900,
 } as const;
 
 export type SystemCeilings = typeof SYSTEM_CEILINGS;

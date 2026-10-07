@@ -26,6 +26,7 @@ import {
   appendAudit,
   getWalletById,
   insertAgentDecision,
+  latestExecutionForWallet,
   listUnresolvedExecutions,
   updateAgentDecision,
   type Db,
@@ -39,7 +40,13 @@ import {
   type CallMeta,
   type ServClient,
 } from '@thesauros/reasoning';
-import { addressEquals, createLogger, type Proposal, type ProposalKind } from '@thesauros/shared';
+import {
+  addressEquals,
+  createLogger,
+  SYSTEM_CEILINGS,
+  type Proposal,
+  type ProposalKind,
+} from '@thesauros/shared';
 import { gather, type GatherDeps, type Gathered } from './gather';
 import { preChecks, type DecisionTrigger, type PreCheckObligation } from './prechecks';
 import { runPipeline, type PipelineDeps, type PipelineOutcome } from './pipeline';
@@ -96,6 +103,14 @@ export type DecisionOutcome =
  * The caller is responsible for the lock — see `runLocked` in `jobs.ts` — so tests can drive the
  * body directly and the lock has exactly one owner.
  */
+/** True while a failed or timed-out execution is recent enough that the loop should hold off. */
+export function inFailureCooldown(last: { status: string; createdAt: Date }, now: Date): boolean {
+  if (last.status !== 'failed' && last.status !== 'timeout') return false;
+  return (
+    now.getTime() - last.createdAt.getTime() < SYSTEM_CEILINGS.EXECUTION_FAILURE_COOLDOWN_SEC * 1000
+  );
+}
+
 export async function runIteration(
   deps: DecisionLoopDeps,
   walletId: string,
@@ -130,6 +145,18 @@ export async function runIteration(
     const reason = `execution ${unresolved[0]?.id} is still ${unresolved[0]?.status}`;
     await skipAudit(db, walletId, now, reason, trigger);
     return { status: 'skipped', reason };
+  }
+
+  // A failed execution cools the wallet down. Without this a persistent failure retried every minute
+  // (each retry a "new" proposal because the balance moved by the gas it burned). A manual owner
+  // trigger bypasses it.
+  if (trigger !== 'owner') {
+    const last = await latestExecutionForWallet(db, walletId).catch(() => undefined);
+    if (last && inFailureCooldown(last, now)) {
+      const reason = `the last execution ${last.status} at ${last.createdAt.toISOString()}; cooling down before trying again`;
+      await skipAudit(db, walletId, now, reason, trigger);
+      return { status: 'skipped', reason };
+    }
   }
 
   // ── gather (db + chain + oracle) ───────────────────────────────────────────────────────────────
