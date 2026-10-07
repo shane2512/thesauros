@@ -13,7 +13,7 @@ import {
   type ConfirmOutcome,
 } from '@thesauros/wallet';
 import { createLogger, type Env, type Result } from '@thesauros/shared';
-import { updateExecution, type Db } from '@thesauros/db';
+import { getExecutionById, updateExecution, type Db } from '@thesauros/db';
 import { arcTestnet } from '../runtime';
 
 export const EXEC_CONFIRM_QUEUE = 'exec.confirm';
@@ -22,7 +22,8 @@ const zAddress = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 
 export const zConfirmJob = z.object({
   executionId: z.string().uuid(),
-  providerTxId: z.string().min(1),
+  /** Optional: the enqueuers don't carry it; the handler reads it from the execution row (`userOpHash`). */
+  providerTxId: z.string().min(1).optional(),
   token: zAddress,
   holders: z.object({
     agent: zAddress,
@@ -98,11 +99,19 @@ export function registerConfirmJob(deps: {
           throw new Error('CIRCLE_API_KEY/CIRCLE_ENTITY_SECRET are required to confirm executions');
         }
         const d = parsed.data;
+        const providerTxId =
+          d.providerTxId ??
+          (await getExecutionById(deps.db, d.executionId))?.userOpHash ??
+          undefined;
+        if (!providerTxId) {
+          log.error({ executionId: d.executionId }, 'no provider transaction id on the execution');
+          throw new Error(`execution ${d.executionId} has no provider transaction id to confirm`);
+        }
         const result = await confirmExecution(
           { db: deps.db, client, publicClient, now: () => new Date() },
           {
             executionId: d.executionId,
-            providerTxId: d.providerTxId,
+            providerTxId,
             token: getAddress(d.token),
             holders: {
               agent: getAddress(d.holders.agent),

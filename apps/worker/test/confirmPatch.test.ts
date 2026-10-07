@@ -33,3 +33,21 @@ describe('confirmPatch', () => {
     });
   });
 });
+
+describe('zConfirmJob', () => {
+  it('accepts the payload the pipeline and the boot resume actually enqueue (no providerTxId)', async () => {
+    const { zConfirmJob } = await import('../src/jobs/confirm');
+    const payload = {
+      executionId: '0eee5d74-009a-4a69-a45f-31ab3eb88e42',
+      token: '0x3600000000000000000000000000000000000000',
+      holders: {
+        agent: '0xD277832fE0b169aed51cB0DF826e0bcEa6bd23e2',
+        treasury: '0xda4626FcE97748B7A78b613c754419c5e3FDAdCA',
+      },
+      expectedDeltas: [
+        { delta: '-9000000', token: '0x3600000000000000000000000000000000000000', holder: 'agent' },
+      ],
+    };
+    expect(zConfirmJob.safeParse(payload).success).toBe(true);
+  });
+});
