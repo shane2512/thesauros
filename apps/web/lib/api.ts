@@ -15,7 +15,7 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(
-  method: 'GET' | 'POST' | 'DELETE',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   schema: ZodType<T>,
   body?: unknown,
@@ -55,5 +55,7 @@ export async function apiRequest<T>(
 export const apiGet = <T>(path: string, schema: ZodType<T>) => apiRequest('GET', path, schema);
 export const apiPost = <T>(path: string, schema: ZodType<T>, body?: unknown) =>
   apiRequest('POST', path, schema, body);
+export const apiPatch = <T>(path: string, schema: ZodType<T>, body?: unknown) =>
+  apiRequest('PATCH', path, schema, body);
 export const apiDelete = <T>(path: string, schema: ZodType<T>, body?: unknown) =>
   apiRequest('DELETE', path, schema, body);

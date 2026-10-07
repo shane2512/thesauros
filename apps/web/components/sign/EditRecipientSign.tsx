@@ -5,7 +5,7 @@
 // prevent). Otherwise mirrors AddRecipientSign: same two-step nonce+signature confirmation screen.
 import { useState } from 'react';
 import { Button, TextButton } from '@/components/primitives';
-import { apiPost } from '@/lib/api';
+import { apiPatch } from '@/lib/api';
 import { zRecipientEdited, type Recipient } from '@/lib/contracts';
 import { z } from 'zod';
 import { formatMoney, formatToken, groupAddress, toBig } from '@/lib/format';
@@ -51,14 +51,14 @@ export function EditRecipientSign({
   });
 
   const flow = useSignFlow<Prepare>({
-    prepare: () => apiPost(`/api/policy/recipients/${recipient.id}`, zPrepare, fields()),
+    prepare: () => apiPatch(`/api/policy/recipients/${recipient.id}`, zPrepare, fields()),
     sign: async (p) => {
       const addr = signerAddress ?? (await connectAddress());
       setSignerAddress(addr);
       return signMessage(addr, p.message);
     },
     submit: (p, signature) =>
-      apiPost(`/api/policy/recipients/${recipient.id}`, zRecipientEdited, {
+      apiPatch(`/api/policy/recipients/${recipient.id}`, zRecipientEdited, {
         ...fields(),
         signature,
         message: p.message,
