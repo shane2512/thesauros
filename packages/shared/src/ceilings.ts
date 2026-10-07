@@ -54,6 +54,10 @@ export const SYSTEM_CEILINGS = {
   /** Held back from every sweep so the sweep's own transaction can pay for itself. Real observed fee
    * on Arc testnet was ~0.0015 USDC; this leaves headroom for gas-price movement. */
   SWEEP_GAS_RESERVE_MICRO_USD: 20_000n,
+  /** Same reason, for deposits: the agent wallet pays the approve and the deposit fee out of the very
+   * USDC it holds, so a deposit of its whole balance is rejected as INSUFFICIENT_TOKEN (found live on
+   * a 31.006638 USDC deposit). The observed cost of an approve plus a deposit was ~0.0094 USDC. */
+  DEPOSIT_GAS_RESERVE_MICRO_USD: 100_000n,
 } as const;
 
 export type SystemCeilings = typeof SYSTEM_CEILINGS;

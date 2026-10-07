@@ -18,7 +18,14 @@
 // `evaluate()`, a signed AllowReceipt and the executor exactly like a SERV one. It skips only the
 // LLM proposer and (via R15's `source` exemption) the shadow verifier.
 import { hashProposal } from '@thesauros/policy';
-import type { Address, Policy, Proposal, ProposalKind, RiskTrigger } from '@thesauros/shared';
+import {
+  SYSTEM_CEILINGS,
+  type Address,
+  type Policy,
+  type Proposal,
+  type ProposalKind,
+  type RiskTrigger,
+} from '@thesauros/shared';
 
 /** Below this, an action is not worth a transaction. 0.1 USDC at 6 decimals. */
 export const MIN_ACTION_BASE_UNITS = 100_000n;
@@ -249,7 +256,10 @@ function decide(input: PreCheckInput): PreCheck {
       const float = input.obligations
         .filter((o) => o.dueDate.getTime() <= floatUntil.getTime())
         .reduce((s, o) => s + o.amount, 0n);
-      const free = clampZero(input.agentUsdc - float);
+      // Arc's gas token is USDC: keep enough in the agent wallet to pay for the approve and the deposit.
+      const free = clampZero(
+        input.agentUsdc - float - SYSTEM_CEILINGS.DEPOSIT_GAS_RESERVE_MICRO_USD,
+      );
       const managed = liquid + input.vaults.reduce((s, v) => s + v.positionAssets, 0n);
 
       for (const vault of input.vaults) {

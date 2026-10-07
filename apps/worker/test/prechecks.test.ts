@@ -2,7 +2,7 @@
 // Every case here is a shape the live loop will actually hit.
 import { describe, expect, it } from 'vitest';
 import { hashProposal } from '@thesauros/policy';
-import type { Policy, Proposal } from '@thesauros/shared';
+import { SYSTEM_CEILINGS, type Policy, type Proposal } from '@thesauros/shared';
 import {
   MIN_ACTION_BASE_UNITS,
   PAYROLL_FLOAT_DAYS,
@@ -297,11 +297,23 @@ describe('preChecks — (c) idle cash (D-37: the model will not do this reliably
     const proposal = deterministic(result);
     expect(proposal.kind).toBe('vault_deposit');
     // liquid 200k - buffer 120k - obligations 5.5k = 74.5k deployable;
-    // the agent holds 50k and must keep 5.5k liquid for the payment due in 2 days.
-    expect(proposal.params).toEqual({ vaultId: 'v1', amount: 44_500n * ONE });
-    expect(proposal.expectedDeltas).toEqual([
-      { token: USDC, holder: 'agent', delta: -44_500n * ONE },
-    ]);
+    // the agent holds 50k and must keep 5.5k liquid for the payment due in 2 days, plus gas.
+    const amount = 44_500n * ONE - SYSTEM_CEILINGS.DEPOSIT_GAS_RESERVE_MICRO_USD;
+    expect(proposal.params).toEqual({ vaultId: 'v1', amount });
+    expect(proposal.expectedDeltas).toEqual([{ token: USDC, holder: 'agent', delta: -amount }]);
+  });
+
+  it('never deposits the whole agent balance, because USDC is also its gas token', () => {
+    const balance = 31_006_638n;
+    const result = preChecks(
+      input({ treasuryUsdc: 150_000n * ONE, agentUsdc: balance, allowanceRemaining: 0n }),
+    );
+    const proposal = deterministic(result);
+    expect(proposal.kind).toBe('vault_deposit');
+    expect(proposal.params).toEqual({
+      vaultId: 'v1',
+      amount: balance - SYSTEM_CEILINGS.DEPOSIT_GAS_RESERVE_MICRO_USD,
+    });
   });
 
   it('respects the vault allocation cap (R09 head-room)', () => {
