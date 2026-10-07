@@ -3,7 +3,7 @@
 // needed for a dashboard/activity read, and the text can never disagree with the stored verdict
 // since it's derived only from it (same guarantee Steward's own `explain.ts` documents).
 import { explainVerdict, ruleSentences } from '@thesauros/policy';
-import type { AgentDecisionRow, SimulationRow, VerdictRow } from '@thesauros/db';
+import type { AgentDecisionRow, ExecutionRow, SimulationRow, VerdictRow } from '@thesauros/db';
 import type { RuleCode, Verdict } from '@thesauros/shared';
 import type { DecisionDetail, DecisionItem, RuleCheck } from './contracts';
 
@@ -71,6 +71,7 @@ export function toDecisionDetail(
   row: AgentDecisionRow,
   verdict: VerdictRow | undefined,
   simulation: SimulationRow | undefined,
+  execution: ExecutionRow | undefined,
 ): DecisionDetail {
   const { kind, amount } = proposalOf(row);
   const item = toDecisionItem(row, verdict);
@@ -122,7 +123,14 @@ export function toDecisionDetail(
           deltas: (simulation.deltas as { holder: string; token: string; delta: string }[]) ?? [],
         }
       : null,
-    execution: null,
+    execution: execution
+      ? {
+          status: execution.status,
+          txHash: execution.txHash,
+          error: execution.error,
+          confirmedAt: execution.confirmedAt ? execution.confirmedAt.toISOString() : null,
+        }
+      : null,
     whyBlocked,
   };
 }

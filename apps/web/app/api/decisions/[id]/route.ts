@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getAgentDecision, getSimulationForDecision, getVerdictForDecision } from '@thesauros/db';
+import {
+  getAgentDecision,
+  getExecutionForDecision,
+  getSimulationForDecision,
+  getVerdictForDecision,
+} from '@thesauros/db';
 import { requireWallet } from '@/lib/requireWallet';
 import { apiError } from '@/lib/apiError';
 import { toDecisionDetail } from '@/lib/decisions';
@@ -18,9 +23,10 @@ export async function GET(
   if (!row || row.walletId !== auth.wallet.id)
     return apiError(404, 'not_found', 'Decision not found.');
 
-  const [verdict, simulation] = await Promise.all([
+  const [verdict, simulation, execution] = await Promise.all([
     getVerdictForDecision(database, id),
     getSimulationForDecision(database, id),
+    getExecutionForDecision(database, id),
   ]);
-  return NextResponse.json(toDecisionDetail(row, verdict, simulation));
+  return NextResponse.json(toDecisionDetail(row, verdict, simulation, execution));
 }

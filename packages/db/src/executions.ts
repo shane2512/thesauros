@@ -149,6 +149,21 @@ export async function getExecutionById(db: Db, id: string): Promise<ExecutionRow
   return (await db.select().from(executions).where(eq(executions.id, id)).limit(1))[0];
 }
 
+/** The execution a decision produced, if it was ever sent (one per decision). */
+export async function getExecutionForDecision(
+  db: Db,
+  decisionId: string,
+): Promise<ExecutionRow | undefined> {
+  return (
+    await db
+      .select()
+      .from(executions)
+      .where(eq(executions.decisionId, decisionId))
+      .orderBy(desc(executions.createdAt))
+      .limit(1)
+  )[0];
+}
+
 /** Patch an execution row. Status transitions themselves are policed in the executor/confirmer. */
 export async function updateExecution(
   db: Db,
