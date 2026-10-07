@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import { getLatestMandate, insertMandate, latestPolicyVersion } from '@thesauros/db';
 import {
@@ -29,6 +30,8 @@ const ACTIVATE_TTL_MS = 5 * 60 * 1000;
  * invisible to a stale draft, so "add a recipient, then sign the next policy version" (the
  * Recipients screen's own flow) would otherwise silently sign a policy that still can't pay them.
  */
+const zIssues = z.array(z.object({ message: z.string(), suggestion: z.string().optional() }));
+
 export async function GET(): Promise<NextResponse> {
   const auth = await requireWallet();
   if (!auth) return apiError(401, 'unauthorized', 'Sign in first.');
@@ -53,10 +56,18 @@ export async function GET(): Promise<NextResponse> {
       { walletId: auth.wallet.id, issues: outcome.issues, questions: outcome.questions },
       'policy prepare: recompile did not produce a draft',
     );
+    // Say WHY, in the compiler's own words: "does not compile cleanly" alone leaves the owner guessing
+    // which recipient or vault to change.
+    const parsedIssues = zIssues.safeParse(outcome.issues);
+    const reasons = (parsedIssues.success ? parsedIssues.data : [])
+      .slice(0, 2)
+      .map((i) => (i.suggestion ? `${i.message} ${i.suggestion}` : i.message));
     return apiError(
       409,
       'no_draft',
-      'The mandate does not compile cleanly against the current recipients/vaults.',
+      reasons.length > 0
+        ? `The mandate does not fit your current recipients/vaults: ${reasons.join(' ')}`
+        : 'The mandate does not compile cleanly against the current recipients/vaults.',
     );
   }
 
