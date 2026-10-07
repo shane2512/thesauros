@@ -358,6 +358,19 @@ it isn't part of the Phase 0 gate but is needed for `pnpm test`'s DB-backed suit
 
 ## Decisions (ADR-lite)
 
+### D-028 — The "Demo data" banner is hidden (owner decision; deviates from I11's banner clause)
+
+I11 asked for a persistent "DEMO DATA" banner whenever demo overrides are active. On Arc testnet there is
+no fresh keyless USDC price feed (checked: Pyth's public price API needs a key; the Pyth and Stork
+contracts on Arc testnet hold stale or missing USDC prices), so the app prices USDC at a fixed $1.00 in
+`DEMO_MODE`. The owner chose to hide the banner for the testnet demo. Kept instead:
+
+- Every decision's R12 check still reads "(DEMO parity fallback)" when a price was assumed, so the
+  assumption is on the audited record and visible in the decision detail.
+- The fence itself is unchanged: demo pricing still requires `DEMO_MODE=true` and the Arc testnet chain id.
+- `banners()` keeps the `demoMode` input, so the banner is a one-line change to restore.
+- Before any mainnet use (I8's Phase 5 gate) a real price source is required and demo mode must be off.
+
 ### D-027 — One agent wallet per owner address, permanently (`agent_wallet_registry`)
 
 Wiping the database used to orphan an owner's Circle agent wallet: re-onboarding provisioned a brand-new

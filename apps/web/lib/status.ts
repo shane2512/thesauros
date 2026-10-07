@@ -53,18 +53,13 @@ type BannerInput = {
   refreshFailed?: boolean;
 };
 
-/** Which banners the shell shows, in order. I11: the DEMO DATA banner is required here (unlike
- * Steward's own project, where it was removed by explicit owner request — D-020). */
+/** Which banners the shell shows, in order. The "Demo data" banner is deliberately NOT shown (owner
+ * decision, D-028): on testnet USDC is fixed at $1.00 and the app is labelled testnet everywhere. The
+ * disclosure stays on the record instead: R12's check text on every decision still says "(DEMO parity
+ * fallback)" when a price was assumed, so a reviewer can always see it. `demoMode` is kept in the
+ * input so the banner can be switched back on in one line. */
 export function banners(i: BannerInput): Banner[] {
   const out: Banner[] = [];
-  if (i.demoMode)
-    out.push({
-      id: 'demo',
-      tone: 'info',
-      title: 'Demo data',
-      body: 'Prices and rates may be mocked for this testnet demo (I11).',
-      live: 'polite',
-    });
   if (i.data?.wallet.frozen)
     out.push({
       id: 'frozen',
