@@ -22,6 +22,8 @@
     "demo:provision-owner": "tsx scripts/demo/provision-owner.ts",
     "demo:fund-owner": "tsx scripts/demo/fund-owner.ts",
     "demo:attack": "tsx scripts/demo/attack.ts",
+    "pilot:shadow": "tsx scripts/pilot/shadow.ts",
+    "pilot:report": "tsx scripts/pilot/report.ts",
     "demo:drawdown": "tsx scripts/demo/drawdown.ts",
     "demo:reset": "tsx scripts/demo/reset.ts",
     "contracts:test": "forge test --root contracts",

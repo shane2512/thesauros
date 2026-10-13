@@ -84,6 +84,7 @@ export type PipelineOutcome =
   | { status: 'executed'; verdict: Verdict; execution: ExecuteOutcome }
   | { status: 'escalated'; verdict: Verdict; approval: ApprovalRow }
   | { status: 'denied'; verdict: Verdict }
+  | { status: 'shadow'; verdict: Verdict }
   | { status: 'failed'; verdict?: Verdict; code: string; message: string };
 
 /** Security-relevant denials the owner is told about (SECURITY §8, DEMO beat 1:30). */
@@ -219,6 +220,28 @@ export async function runPipeline(
       });
     }
     return { status: 'denied', verdict };
+  }
+
+  // Shadow mode (pilots): the verdict is real, the action is not. An allowed or escalated proposal is
+  // recorded for the comparison report and then stops here: no receipt, no approval request, no send.
+  if (g.wallet.shadow) {
+    await updateAgentDecision(db, input.decisionId, {
+      status: verdict.decision === 'ALLOW' ? 'allowed' : 'escalated',
+      proposalHash,
+    });
+    const recorded = await audit(db, g.wallet.id, 'SHADOW_PROPOSAL', input.decisionId, now, {
+      decision: verdict.decision,
+      proposalHash,
+      policyVersion: verdict.policyVersion,
+      kind: proposal.kind,
+      params: JSON.parse(
+        JSON.stringify(proposal.params, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)),
+      ),
+      codes: verdict.results.filter((r) => r.result !== 'PASS').map((r) => r.code),
+    });
+    if (!recorded)
+      return { status: 'failed', verdict, code: 'AUDIT_FAILED', message: 'SHADOW_PROPOSAL' };
+    return { status: 'shadow', verdict };
   }
 
   if (verdict.decision === 'ESCALATE') {

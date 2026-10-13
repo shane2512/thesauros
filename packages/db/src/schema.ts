@@ -106,6 +106,8 @@ export const wallets = pgTable(
     frozenReason: text('frozen_reason'),
     breakerFailures: integer('breaker_failures').notNull().default(0),
     breakerOpen: boolean('breaker_open').notNull().default(false),
+    /** Shadow mode (pilots): the loop proposes and records verdicts but never sends or asks for approval. */
+    shadow: boolean('shadow').notNull().default(false),
     activePolicyVersion: integer('active_policy_version'),
     createdAt: createdAt(),
   },

@@ -1,0 +1,1 @@
+ALTER TABLE "wallets" ADD COLUMN "shadow" boolean DEFAULT false NOT NULL;
