@@ -94,10 +94,11 @@ export function compareShadowWeek(
   }
   for (const rows of grouped.values()) {
     const sorted = [...rows].sort((a, b) => a.date.getTime() - b.date.getTime());
-    const cluster = sorted.filter(
-      (r, i) => i > 0 && r.date.getTime() - sorted[i - 1]!.date.getTime() <= 7 * DAY_MS,
-    );
-    if (cluster.length > 0) possibleDuplicates.push(sorted);
+    const close = sorted.some((r, i) => {
+      const before = sorted[i - 1];
+      return before !== undefined && r.date.getTime() - before.date.getTime() <= 7 * DAY_MS;
+    });
+    if (close) possibleDuplicates.push(sorted);
   }
 
   // Idle cash: the largest deposit Thesauros wanted to make (each day's proposal is the same pot).
@@ -167,10 +168,13 @@ export function renderShadowReport(team: string, r: ShadowReport): string {
   }
   if (r.possibleDuplicates.length > 0) {
     lines.push('## Possible double payments', '');
-    for (const group of r.possibleDuplicates)
+    for (const group of r.possibleDuplicates) {
+      const first = group[0];
+      if (!first) continue;
       lines.push(
-        `- ${group[0]!.recipient}: ${usdc(group[0]!.amount)} USDC paid ${group.map((g) => day(g.date)).join(' and ')}`,
+        `- ${first.recipient}: ${usdc(first.amount)} USDC paid ${group.map((g) => day(g.date)).join(' and ')}`,
       );
+    }
     lines.push('');
   }
   if (r.blocked.length > 0) {
