@@ -13,7 +13,7 @@ import {
   type ConfirmOutcome,
 } from '@thesauros/wallet';
 import { createLogger, type Env, type Result } from '@thesauros/shared';
-import { getExecutionById, updateExecution, type Db } from '@thesauros/db';
+import { getExecutionById, setObligationStatus, updateExecution, type Db } from '@thesauros/db';
 import { arcTestnet } from '../runtime';
 
 export const EXEC_CONFIRM_QUEUE = 'exec.confirm';
@@ -59,6 +59,20 @@ export function confirmPatch(result: Result<ConfirmOutcome, string>, now: Date):
       ...(result.value.txHash ? { txHash: result.value.txHash } : {}),
     };
   return { status: 'confirmed', txHash: result.value.txHash, confirmedAt: now };
+}
+
+/**
+ * A scheduled payment is paid once its execution is confirmed on chain, and only then. Nothing else
+ * ever settled an obligation, so a paid payment stayed "scheduled", the loop kept re-selecting it
+ * (blocked each time by the 24h repeat guard) and never reached the next one.
+ */
+export function obligationStatusAfter(
+  result: Result<ConfirmOutcome, string>,
+  obligationId: string | undefined,
+): 'paid' | undefined {
+  return obligationId !== undefined && result.ok && result.value.status === 'confirmed'
+    ? 'paid'
+    : undefined;
 }
 
 export function registerConfirmJob(deps: {
@@ -128,6 +142,8 @@ export function registerConfirmJob(deps: {
           },
         );
         await updateExecution(deps.db, d.executionId, confirmPatch(result, new Date()));
+        if (obligationStatusAfter(result, d.obligationId) === 'paid' && d.obligationId)
+          await setObligationStatus(deps.db, d.obligationId, 'paid', d.executionId);
         if (!result.ok) {
           log.error({ executionId: d.executionId, error: result.error }, 'confirmer failed');
           throw new Error(result.error);

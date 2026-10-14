@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { confirmPatch } from '../src/jobs/confirm';
+import { confirmPatch, obligationStatusAfter } from '../src/jobs/confirm';
 
 const now = new Date('2026-10-06T00:00:00Z');
 const txHash = `0x${'ab'.repeat(32)}` as const;
@@ -49,5 +49,26 @@ describe('zConfirmJob', () => {
       ],
     };
     expect(zConfirmJob.safeParse(payload).success).toBe(true);
+  });
+});
+
+describe('obligationStatusAfter', () => {
+  const OBL = '685e873b-44b9-4b8e-b911-73ef0ee00dde';
+
+  it('marks the obligation paid once its execution is confirmed', () => {
+    expect(obligationStatusAfter({ ok: true, value: { status: 'confirmed', txHash } }, OBL)).toBe(
+      'paid',
+    );
+  });
+
+  it('leaves it scheduled when the execution failed or could not be confirmed', () => {
+    expect(obligationStatusAfter({ ok: true, value: { status: 'failed' } }, OBL)).toBeUndefined();
+    expect(obligationStatusAfter({ ok: false, error: 'rpc down' }, OBL)).toBeUndefined();
+  });
+
+  it('does nothing when the execution was not for an obligation (a deposit)', () => {
+    expect(
+      obligationStatusAfter({ ok: true, value: { status: 'confirmed', txHash } }, undefined),
+    ).toBeUndefined();
   });
 });
