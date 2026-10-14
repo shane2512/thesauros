@@ -193,3 +193,33 @@ export function renderShadowReport(team: string, r: ShadowReport): string {
   );
   return lines.join('\n');
 }
+
+export type LiveTx = { at: Date; kind: string; amount: bigint; txHash: string };
+
+/** The treasury's real, confirmed on-chain transactions, each with a link anyone can open. */
+export function renderLiveTransactions(txs: LiveTx[], explorerBase: string): string {
+  if (txs.length === 0)
+    return '## Live transactions\n\nNo confirmed on-chain transactions in this window.\n';
+  const byKind = new Map<string, { n: number; total: bigint }>();
+  for (const t of txs) {
+    const cur = byKind.get(t.kind) ?? { n: 0, total: 0n };
+    byKind.set(t.kind, { n: cur.n + 1, total: cur.total + t.amount });
+  }
+  const total = txs.reduce((sum, t) => sum + t.amount, 0n);
+  const lines = [
+    '## Live transactions',
+    '',
+    `**${txs.length}** confirmed on-chain transactions moving **${usdc(total)} USDC** in total (testnet, test USDC).`,
+    '',
+    ...[...byKind].map(([k, v]) => `- ${k}: ${v.n} (${usdc(v.total)} USDC)`),
+    '',
+    '| Date | Action | Amount (USDC) | Transaction |',
+    '|---|---|---|---|',
+    ...txs.map(
+      (t) =>
+        `| ${day(t.at)} | ${t.kind} | ${usdc(t.amount)} | [${t.txHash.slice(0, 10)}…](${explorerBase}/tx/${t.txHash}) |`,
+    ),
+    '',
+  ];
+  return lines.join('\n');
+}

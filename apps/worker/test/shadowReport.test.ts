@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   compareShadowWeek,
+  renderLiveTransactions,
   renderShadowReport,
   type PaidRow,
   type ProposalRow,
@@ -86,5 +87,34 @@ describe('compareShadowWeek', () => {
     const md = renderShadowReport('Test team', compareShadowWeek([proposal({})], [paid({})]));
     expect(md).toContain('# Thesauros shadow week: Test team');
     expect(md).toContain('Matched what the team actually paid: **1**');
+  });
+});
+
+describe('renderLiveTransactions', () => {
+  it('lists confirmed transactions with explorer links and totals', () => {
+    const md = renderLiveTransactions(
+      [
+        {
+          at: d('2026-10-14'),
+          kind: 'pay_recipient',
+          amount: 25n * ONE,
+          txHash: `0x${'ab'.repeat(32)}`,
+        },
+        {
+          at: d('2026-10-15'),
+          kind: 'vault_deposit',
+          amount: 100n * ONE,
+          txHash: `0x${'cd'.repeat(32)}`,
+        },
+      ],
+      'https://explorer.testnet.arc.io',
+    );
+    expect(md).toContain('**2** confirmed on-chain transactions moving **125.00 USDC**');
+    expect(md).toContain(`https://explorer.testnet.arc.io/tx/0x${'ab'.repeat(32)}`);
+    expect(md).toContain('- pay_recipient: 1 (25.00 USDC)');
+  });
+
+  it('says so plainly when there are none', () => {
+    expect(renderLiveTransactions([], 'https://x')).toContain('No confirmed on-chain transactions');
   });
 });

@@ -353,8 +353,19 @@ export function StatGrid({ d }: { d: Dashboard }) {
 
 export function AgentWalletCard({ d, explorerBase }: { d: Dashboard; explorerBase: string }) {
   const [copied, setCopied] = useState(false);
+  const [run, setRun] = useState<'idle' | 'busy' | 'queued' | 'wait' | 'error'>('idle');
   const addr = d.wallet.agentWalletAddress;
   const agent = toBig(d.balances.agentUsdc);
+  const runNow = async () => {
+    setRun('busy');
+    try {
+      const res = await fetch('/api/agent/run', { method: 'POST' });
+      setRun(res.ok ? 'queued' : res.status === 429 ? 'wait' : 'error');
+    } catch {
+      setRun('error');
+    }
+    setTimeout(() => setRun('idle'), 6000);
+  };
   const copy = async () => {
     if (!addr) return;
     try {
@@ -427,6 +438,28 @@ export function AgentWalletCard({ d, explorerBase }: { d: Dashboard; explorerBas
           </a>
         ) : null}
       </div>
+      {addr ? (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-cap text-muted" role="status">
+            {run === 'queued'
+              ? 'Checking now. The result appears in Activity in a few seconds.'
+              : run === 'wait'
+                ? 'A check was just queued. Give it a few seconds.'
+                : run === 'error'
+                  ? 'Could not start a check. Try again.'
+                  : 'Ask your agent to look at the treasury right now.'}
+          </p>
+          <button
+            type="button"
+            onClick={runNow}
+            disabled={d.wallet.frozen || run === 'busy'}
+            className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 text-cap font-bold text-on-accent disabled:opacity-50"
+          >
+            <IconAgent className="size-3.5" />
+            {run === 'busy' ? 'Starting' : 'Run now'}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

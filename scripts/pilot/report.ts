@@ -1,12 +1,16 @@
-// Pilot report: what Thesauros proposed for a team versus what the team actually paid.
-//   pnpm pilot:report <ownerAddress | walletId> --paid paid.csv [--team "Name"] [--days 7] [--apy 4]
+// Pilot report: what Thesauros proposed for a team versus what the team actually paid, plus the team's
+// real confirmed on-chain transactions.
+//   pnpm pilot:report <ownerAddress | walletId> [--paid paid.csv] [--team "Name"] [--days 7] [--apy 4]
+// Without --paid it prints only the live transactions.
 // paid.csv has a header row: date,recipient,amount   e.g.  2026-10-15,Asha,500
 import { readFileSync } from 'node:fs';
 import { createDb } from '@thesauros/db';
 import { getEnv } from '@thesauros/shared';
 import {
   compareShadowWeek,
+  renderLiveTransactions,
   renderShadowReport,
+  type LiveTx,
   type PaidRow,
   type ProposalRow,
 } from '../../apps/worker/src/shadowReport';
@@ -25,9 +29,9 @@ const who = args.find(
   (a) => !a.startsWith('--') && args[args.indexOf(a) - 1]?.startsWith('--') !== true,
 );
 const paidFile = flag('paid');
-if (!who || !paidFile) {
+if (!who) {
   console.error(
-    'usage: pnpm pilot:report <ownerAddress | walletId> --paid paid.csv [--team "Name"] [--days 7] [--apy 4]',
+    'usage: pnpm pilot:report <ownerAddress | walletId> [--paid paid.csv] [--team "Name"] [--days 7] [--apy 4]',
   );
   process.exit(1);
 }
@@ -38,7 +42,7 @@ const micro = (s: string): bigint => {
   const [whole = '0', frac = ''] = s.trim().replace(/,/g, '').split('.');
   return BigInt(whole) * 1_000_000n + BigInt((frac + '000000').slice(0, 6));
 };
-const paid: PaidRow[] = readFileSync(paidFile, 'utf8')
+const paid: PaidRow[] = (paidFile ? readFileSync(paidFile, 'utf8') : '')
   .split(/\r?\n/)
   .slice(1)
   .filter((l) => l.trim())
@@ -107,6 +111,35 @@ const proposals: ProposalRow[] = rows.map((r) => {
   };
 });
 
-const report = compareShadowWeek(proposals, paid, { windowDays: days, apyBps });
-console.log(renderShadowReport(flag('team') ?? wallet.owner_address, report));
+const team = flag('team') ?? wallet.owner_address;
+if (paidFile) {
+  const report = compareShadowWeek(proposals, paid, { windowDays: days, apyBps });
+  console.log(renderShadowReport(team, report));
+} else {
+  console.log(`# Thesauros pilot: ${team}
+`);
+}
+
+const txRows = (
+  await pool.query(
+    `select e.kind, e.tx_hash, e.confirmed_at, d.proposal
+     from executions e left join agent_decisions d on d.id = e.decision_id
+     where e.wallet_id = $1 and e.status = 'confirmed' and e.tx_hash is not null
+       and e.created_at > now() - ($2 || ' days')::interval
+     order by e.confirmed_at`,
+    [wallet.id, String(days)],
+  )
+).rows as {
+  kind: string;
+  tx_hash: string;
+  confirmed_at: Date;
+  proposal: { params?: Record<string, unknown> } | null;
+}[];
+const live: LiveTx[] = txRows.map((t) => ({
+  at: t.confirmed_at,
+  kind: t.kind,
+  amount: BigInt(String(t.proposal?.params?.['amount'] ?? '0')),
+  txHash: t.tx_hash,
+}));
+console.log(renderLiveTransactions(live, 'https://explorer.testnet.arc.io'));
 await pool.end();
