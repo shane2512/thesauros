@@ -50,6 +50,7 @@ import {
 import { gather, type GatherDeps, type Gathered } from './gather';
 import { preChecks, type DecisionTrigger, type PreCheckObligation } from './prechecks';
 import { runPipeline, type PipelineDeps, type PipelineOutcome } from './pipeline';
+import { materializeScheduledObligations } from './schedule';
 
 /**
  * Kinds SERV may choose from.
@@ -158,6 +159,10 @@ export async function runIteration(
       return { status: 'skipped', reason };
     }
   }
+
+  // Turn the signed policy's recipient schedules into payments that can fall due. Never allowed to
+  // break an iteration: if it fails the loop simply has nothing new to pay this tick.
+  await materializeScheduledObligations(db, walletId, now).catch(() => 0);
 
   // ── gather (db + chain + oracle) ───────────────────────────────────────────────────────────────
   const gathered = await timings.step('gather', () =>
