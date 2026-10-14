@@ -67,11 +67,13 @@ Copy this to the team. It takes about 15 minutes. Everything runs on Arc testnet
 > **3. Write your rules.** Describe how your team handles money, in plain sentences. For example:
 >
 > *Keep 100 USDC liquid. The agent may move up to 50 USDC per transaction and up to 150 USDC per day on its
-> own. Ask me before anything over 100 USDC. Pay Asha 40 USDC on the 1st of each month and Ben 25 USDC on the
-> 15th. Put idle USDC into the USYC vault, up to 50% of funds.*
+> own. Ask me before anything over 100 USDC. Pay Asha 40 USDC on the 14th of each month and Ben 25 USDC on
+> the 15th.*
 >
-> Use your own numbers. Click compile and read the numbers it shows you before you sign. If something is
-> wrong, edit the text and compile again.
+> Use your own numbers. For a quick test, set one payment's day of the month to today or tomorrow so it is
+> due while you try it. Click compile and read the numbers it shows you before you sign. If something is
+> wrong, edit the text and compile again. (Leave out the USYC vault: Circle only allows approved wallets to
+> deposit into it.)
 >
 > **4. Add your recipients.** On the Recipients screen add each person with their wallet address. Sign each
 > one.
