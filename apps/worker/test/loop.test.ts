@@ -581,7 +581,7 @@ describe('6.5 — the DEMO half-step is ONE-SHOT', () => {
     expect(cron.half).toBeUndefined();
     const half = zLoopTickJob.parse({ half: true });
     expect(half.half).toBe(true);
-    // A wallet-scoped tick (what /api/agent/run enqueues) never spawns a half-step either.
+    // A wallet-scoped tick (what the scheduler enqueues) never spawns a half-step either.
     expect(zLoopTickJob.parse({ walletId: '11111111-2222-4333-8444-555555555555' }).walletId).toBe(
       '11111111-2222-4333-8444-555555555555',
     );

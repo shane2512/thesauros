@@ -3,7 +3,7 @@
 // Queues (API.md "Jobs"):
 //   loop.tick         cron every minute; in DEMO_MODE the handler also re-queues itself at +30 s,
 //                     because cron's finest granularity is one minute
-//   loop.run          one wallet, one iteration (what /api/agent/run and the other jobs enqueue)
+//   loop.run          one wallet, one iteration (what the scheduler and the other jobs enqueue)
 //   exec.confirm      Phase 5's confirmer (registered in jobs/confirm.ts)
 //   obligations.scan  hourly; creates the next monthly occurrence, idempotently
 //   risk.scan         every minute; writes vault + price snapshots and triggers the loop on a hit

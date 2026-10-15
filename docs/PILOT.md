@@ -83,9 +83,8 @@ Copy this to the team. It takes about 15 minutes. Everything runs on Arc testnet
 > **6. Give the agent some test USDC.** Copy the agent wallet address from your dashboard and get free test
 > USDC at https://faucet.circle.com (choose Arc Testnet).
 >
-> **7. Watch it work.** On the dashboard press **Run now** to ask the agent to check the treasury
-> immediately. Open Activity to see what it decided and which rules it checked. Open a decision to see the
-> transaction link.
+> **7. Watch it work.** The agent checks the treasury on its own schedule, so there is nothing to press. Open
+> Activity to see what it decided and which rules it checked. Open a decision to see the transaction link.
 
 ### Mistakes the compiler catches (and how to fix them)
 
@@ -102,8 +101,8 @@ Copy this to the team. It takes about 15 minutes. Everything runs on Arc testnet
   records everything, the team keeps paying as usual, and the report compares the two. Good when the team
   wants zero risk.
 - **Live test (small testnet transactions).** Leave shadow mode off. With the agent wallet funded with test
-  USDC, the agent makes real testnet payments and deposits that its signed policy allows. Press Run now to
-  trigger a check on demand. Each confirmed action has a transaction link, and `pnpm pilot:report` lists them
+  USDC, the agent makes real testnet payments and deposits that its signed policy allows. The agent
+  checks on its own schedule. Each confirmed action has a transaction link, and `pnpm pilot:report` lists them
   all under "Live transactions".
 
 Only real activity by the team counts. Do not move money between your own wallets to inflate numbers, and say
