@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { SAMPLE_MANDATES } from '@/lib/mandateExamples';
+import { CopyBlock } from './CopyBlock';
 
 export const metadata: Metadata = {
   title: 'Docs — Thesauros',
@@ -13,7 +15,7 @@ const SECTIONS: Section[] = [
   { id: 'overview', title: 'Overview' },
   { id: 'how-it-works', title: 'How it works' },
   { id: 'quick-start', title: 'Quick start' },
-  { id: 'mandate', title: 'Writing a mandate' },
+  { id: 'mandate', title: 'How to draft a mandate' },
   { id: 'guardrails', title: 'Guardrails' },
   { id: 'payments', title: 'Payments and recipients' },
   { id: 'yield', title: 'Idle cash and yield' },
@@ -421,67 +423,102 @@ export default function DocsPage() {
             ]}
           />
 
-          <H2 id="mandate">Writing a mandate</H2>
+          <H2 id="mandate">How to draft a mandate</H2>
           <P>
-            A mandate is a few plain sentences. Say how much cash to keep liquid, how much the agent
-            may move alone, when to ask you, and who gets paid when. Use your own numbers.
+            A mandate is a few plain sentences that tell Thesauros how careful to be with your money. You do
+            not need any technical knowledge. Thesauros turns your sentences into exact numbers and shows them
+            to you, and nothing runs until you sign.
           </P>
-          <blockquote className="mt-4 rounded-md border-l-4 border-accent bg-surface-2 p-4 text-[15px] leading-7 text-ink">
-            Keep 5 USDC liquid. The agent may move up to 100 USDC per transaction and up to 500 USDC
-            per day on its own. Ask me before anything of 150 USDC or more. Use a depeg threshold of
-            50 basis points and a vault drawdown threshold of 100 basis points. Pay the hosting
-            wallet 25 USDC on the 14th of each month. Pay the five members 95 USDC each on the 14th
-            of each month.
-          </blockquote>
-          <H3>What a mandate sets</H3>
-          <Table
-            head={['Setting', 'Example wording', 'Effect']}
-            rows={[
-              [
-                'Cash buffer',
-                '“Keep 5 USDC liquid.”',
-                'Money below this level is never moved out.',
-              ],
-              [
-                'Per-transaction limit',
-                '“up to 100 USDC per transaction”',
-                'Largest single action the agent may take alone.',
-              ],
-              [
-                'Daily limit',
-                '“up to 500 USDC per day”',
-                'Cap on outflows in any rolling 24 hours.',
-              ],
-              [
-                'Approval threshold',
-                '“Ask me before anything of 150 USDC or more.”',
-                'At or above this, you approve.',
-              ],
-              [
-                'Risk thresholds',
-                '“depeg threshold of 50 basis points”',
-                'When the agent exits a vault. Both must be set.',
-              ],
-              [
-                'Schedules',
-                '“Pay Asha 40 USDC on the 14th of each month.”',
-                'Becomes a payment that falls due on that day.',
-              ],
+          <Callout title="The short version">
+            Copy a sample below, change the numbers to fit you, compile it, read the result and sign. You can
+            always edit it and compile again.
+          </Callout>
+
+          <H3>The five sentences every mandate needs</H3>
+          <Steps
+            items={[
+              <>
+                <strong className="text-ink">Cash buffer.</strong> “Keep 20 USDC liquid.” This much always
+                stays put and the agent will never move it. Think of it as your emergency cash.
+              </>,
+              <>
+                <strong className="text-ink">Per-transaction limit.</strong> “The agent may move up to 8 USDC
+                per transaction.” The largest single action it may take without asking you.
+              </>,
+              <>
+                <strong className="text-ink">Daily limit.</strong> “…and up to 8 USDC per day on its own.” A
+                cap on everything it moves in any 24 hours.
+              </>,
+              <>
+                <strong className="text-ink">Approval point.</strong> “Ask me for approval before anything over
+                4 USDC.” Above this, the agent waits for your signature instead of acting.
+              </>,
+              <>
+                <strong className="text-ink">Safety triggers.</strong> “Use a depeg threshold of 50 bps and a
+                vault drawdown threshold of 100 bps.” These say when the agent should pull money out of a
+                vault. <strong className="text-ink">Always include both</strong>; a mandate without them will
+                not compile.
+              </>,
             ]}
           />
-          <H3>Tips</H3>
+          <P>
+            “bps” means basis points: 100 bps is 1%. A depeg threshold of 50 bps means “act if USDC drifts
+            0.5% away from one dollar”.
+          </P>
+
+          <H3>How to choose your numbers</H3>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-[15px] leading-7 text-muted marker:text-accent">
+            <li>Start from how much you would be upset to lose in one go. Make your daily limit that or lower.</li>
+            <li>Keep the per-transaction limit at or below the daily limit.</li>
             <li>
-              Compile, then <strong className="text-ink">read the numbers it shows</strong> before
-              you sign. The compiled policy is what the agent obeys, not your sentences.
+              Set the approval point at or below the per-transaction limit if you want to see every larger move
+              first.
             </li>
-            <li>A recipient’s own cap cannot be larger than the overall per-transaction limit.</li>
+            <li>When in doubt, go smaller. You can edit and sign a new mandate later.</li>
+          </ul>
+
+          <H3>Sample mandates to copy</H3>
+          <P>
+            Press Copy, paste it into the mandate box during onboarding and press Compile. The same four appear
+            as buttons in the app.
+          </P>
+          {SAMPLE_MANDATES.map((m) => (
+            <CopyBlock key={m.value} title={m.title} note={m.blurb} text={m.text} />
+          ))}
+          <CopyBlock
+            title="A small team that pays contributors"
+            note="From our first pilot. Add each person as a recipient afterwards."
+            text="Keep 5 USDC liquid. The agent may move up to 100 USDC per transaction and up to 500 USDC per day on its own. Ask me before anything of 150 USDC or more. Use a depeg threshold of 50 basis points and a vault drawdown threshold of 100 basis points."
+          />
+
+          <H3>Paying people</H3>
+          <P>
+            The mandate sets the limits. Who gets paid, how much and on which day of the month is set when you
+            add each <strong className="text-ink">recipient</strong> in the next step. A recipient’s own cap
+            cannot be higher than your per-transaction limit, and a recipient that is your own treasury address
+            is refused.
+          </P>
+
+          <H3>What each number does</H3>
+          <Table
+            head={['Wording', 'What it controls']}
+            rows={[
+              ['“Keep N USDC liquid”', 'The buffer the agent will never touch.'],
+              ['“up to N per transaction”', 'The agent’s limit on any single action.'],
+              ['“up to N per day”', 'The agent’s limit over any rolling 24 hours.'],
+              ['“ask me before anything over N”', 'Above this the agent waits for your approval.'],
+              ['“depeg threshold of N bps”', 'How far USDC can drift from one dollar before an automatic exit.'],
+              ['“vault drawdown threshold of N bps”', 'How far a vault’s price can fall before an automatic exit.'],
+            ]}
+          />
+
+          <H3>If it will not compile</H3>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-[15px] leading-7 text-muted marker:text-accent">
+            <li>Check that both safety thresholds are present.</li>
+            <li>Check that your numbers follow the order above.</li>
             <li>
-              The mandate is compiled with your recipients and vaults. Add them first if compile
-              says it does not compile cleanly.
-            </li>
-            <li>
-              To change a rule, edit the mandate, compile and sign again. Earlier versions are kept.
+              Read the message under the Compile button, edit the text and compile again. Nothing is saved or
+              moved until you sign.
             </li>
           </ul>
 

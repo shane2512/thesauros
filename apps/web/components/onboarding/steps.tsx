@@ -32,7 +32,12 @@ import {
 import { ApiError, apiPost } from '@/lib/api';
 import { zCompile, zProvision, type CompileResponse, type OnboardingState } from '@/lib/contracts';
 import { groupAddress } from '@/lib/format';
-import { isExampleText, TEMPLATE_CHIPS, type TemplateValue } from '@/lib/mandateExamples';
+import {
+  isExampleText,
+  MANDATE_DOCS_HREF,
+  SAMPLE_MANDATES,
+  type TemplateValue,
+} from '@/lib/mandateExamples';
 
 /* ------------------------------------------------------------- 1 meet Thesauros */
 
@@ -333,10 +338,11 @@ export function compileErrorCopy(e: unknown): string {
   return 'Thesauros could not compile the mandate. Nothing moved. Edit it or try again.';
 }
 
-const PRESET_ICON: Record<(typeof TEMPLATE_CHIPS)[number]['value'], IconComponent> = {
-  startup: IconBolt,
-  dao: IconHome,
-  creator: IconPalette,
+const PRESET_ICON: Record<(typeof SAMPLE_MANDATES)[number]['value'], IconComponent> = {
+  small: IconBolt,
+  mid: IconHome,
+  strict: IconShieldCheck,
+  solo: IconPalette,
 };
 
 export function MandateStep({
@@ -348,8 +354,8 @@ export function MandateStep({
   onCompiled: () => void;
   onNext: () => void;
 }) {
-  const [template, setTemplate] = useState<TemplateValue>('startup');
-  const [text, setText] = useState(saved?.text ?? TEMPLATE_CHIPS[0].text);
+  const [template, setTemplate] = useState<TemplateValue>('small');
+  const [text, setText] = useState(saved?.text ?? SAMPLE_MANDATES[0].text);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CompileResponse | null>(
@@ -372,7 +378,7 @@ export function MandateStep({
   };
 
   const reset = () => {
-    const chip = TEMPLATE_CHIPS.find((c) => c.value === template) ?? TEMPLATE_CHIPS[0];
+    const chip = SAMPLE_MANDATES.find((c) => c.value === template) ?? SAMPLE_MANDATES[0];
     setTemplate(chip.value);
     setText(chip.text);
     setResult(null);
@@ -382,7 +388,7 @@ export function MandateStep({
     setBusy(true);
     setError(null);
     try {
-      const r = await apiPost('/api/mandate', zCompile, { text: text.trim(), template });
+      const r = await apiPost('/api/mandate', zCompile, { text: text.trim(), template: 'custom' });
       setResult(r);
       if (r.compiled) onCompiled();
     } catch (e) {
@@ -405,7 +411,7 @@ export function MandateStep({
         aria-label="Start from a template"
         className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pt-5 pb-1"
       >
-        {TEMPLATE_CHIPS.map((c) => {
+        {SAMPLE_MANDATES.map((c) => {
           const on = template === c.value;
           const Icon = PRESET_ICON[c.value];
           return (
@@ -463,6 +469,15 @@ export function MandateStep({
             </button>
           </span>
         </label>
+        <a
+          href={MANDATE_DOCS_HREF}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-9 items-center gap-1 self-start text-cap font-semibold text-accent-ink hover:underline"
+        >
+          Learn how to draft a mandate <IconExternal className="size-3.5" />
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
       </section>
 
       {error ? (
