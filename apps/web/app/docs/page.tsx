@@ -576,7 +576,16 @@ export default function DocsPage() {
           <Callout title="USYC is permissioned">
             Circle only lets approved wallets deposit into USYC. Unless your agent wallet has been
             approved, do not add the USYC vault to your policy; the deposit would be refused.
-            Payments work without it.
+            Payments work without it. To request access for your wallet, see{' '}
+            <a
+              href="https://www.circle.com/usyc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-accent-ink underline"
+            >
+              Circle’s USYC page
+            </a>
+            .
           </Callout>
           <P>
             On Arc, USDC is also the gas token, so the agent holds back a small reserve from every
