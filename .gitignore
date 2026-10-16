@@ -25,3 +25,12 @@ coverage/
 contracts/lib/
 contracts/cache/
 contracts/out/
+
+# Marketing media (trailer projects, renders, logo/social exports) — kept local, never committed
+videos/
+brand/
+
+# Local agent tooling (installed video skills) — not part of the product
+.agents/
+.claude/skills/
+skills-lock.json
