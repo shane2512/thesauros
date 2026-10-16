@@ -8,16 +8,22 @@
 
 An AI-operated business treasury on Arc. The AI proposes. Code disposes.
 
-[**Live app**](https://thesauros-wb3.onrender.com) · [Demo video](#demo) · [How it works](#how-it-works) · [Run it locally](#run-it-locally) · [Docs](#documentation)
+[**Live app**](https://thesauros-wb3.onrender.com) · [**Verifiable proofs**](docs/PROOFS.md) · [Demo video](#demo) · [How it works](#how-it-works) · [Run it locally](#run-it-locally) · [Docs](#documentation)
 
 ![Arc testnet](https://img.shields.io/badge/network-Arc%20testnet-black)
 ![Settlement](https://img.shields.io/badge/settlement-USDC-2775ca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
+[![Proofs](https://img.shields.io/badge/proofs-8%20on--chain%20txs-FF8A2B)](docs/PROOFS.md)
 ![Hackathon](https://img.shields.io/badge/Tameion%20Agents%20Hackathon-Canteen%20%C3%97%20Circle-fde400)
 
 </div>
 
 ---
+
+> **Proof, not promises.** A real five-person team ran its monthly bills through Thesauros: the agent
+> made 6 payments (500 USDC) on its own, all confirmed on Arc testnet, alongside 2 USYC deposits into
+> Circle's Teller. 12 wallets connected and 26 policies were signed. Every transaction is linked and
+> re-checkable in [**docs/PROOFS.md**](docs/PROOFS.md).
 
 ## What it is
 
@@ -178,6 +184,7 @@ docs/         specs, decisions and verification log
 | [`docs/SECURITY.md`](docs/SECURITY.md)                     | Threat model and failure matrix                     |
 | [`docs/POLICY_ENGINE.md`](docs/POLICY_ENGINE.md)           | Policy schema and rule catalogue                    |
 | [`docs/CIRCLE_INTEGRATION.md`](docs/CIRCLE_INTEGRATION.md) | Circle Agent Stack setup                            |
+| [`docs/PROOFS.md`](docs/PROOFS.md)                         | On-chain transactions and usage, all verifiable     |
 | [`docs/VERIFY.md`](docs/VERIFY.md)                         | External facts verified against live Arc and Circle |
 | [`docs/PROGRESS.md`](docs/PROGRESS.md)                     | Status log and decision record                      |
 | [`docs/DEMO.md`](docs/DEMO.md)                             | Three-minute demo script                            |
