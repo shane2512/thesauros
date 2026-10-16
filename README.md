@@ -9,7 +9,7 @@
 An autonomous, AI-operated business treasury settled in USDC on Arc.<br />
 The AI proposes. Deterministic code disposes.
 
-[**Live app**](https://thesauros-wb3.onrender.com) · [**Verifiable proofs**](docs/PROOFS.md) · [How it works](#how-it-works) · [Safety model](#safety-model) · [Quick start](#quick-start) · [Docs](#documentation)
+[**Live app**](https://thesauros-wb3.onrender.com) · [**Demo video**](https://youtu.be/ZgaEqr7Y4e0) · [**Verifiable proofs**](docs/PROOFS.md) · [How it works](#how-it-works) · [Safety model](#safety-model) · [Quick start](#quick-start) · [Docs](#documentation)
 
 [![Network](https://img.shields.io/badge/network-Arc%20testnet-111111)](https://docs.arc.network)
 [![Settlement](https://img.shields.io/badge/settlement-USDC-2775ca)](https://www.circle.com/usdc)
@@ -31,6 +31,13 @@ The AI proposes. Deterministic code disposes.
 | **Audit** | **14,000+** append-only, hash-chained audit-log entries |
 
 Every figure links to a public transaction or a re-runnable query in [**docs/PROOFS.md**](docs/PROOFS.md).
+
+## Demo
+
+<a href="https://youtu.be/ZgaEqr7Y4e0"><img src="https://img.youtube.com/vi/ZgaEqr7Y4e0/maxresdefault.jpg" alt="Watch the Thesauros product demo on YouTube" width="100%" /></a>
+
+**[▶ Watch the 3-minute product demo](https://youtu.be/ZgaEqr7Y4e0)** — onboarding, mandate to signed policy, recipients,
+the USYC vault, the Policy Engine denying proposals, and Freeze.
 
 ## Why Thesauros
 
