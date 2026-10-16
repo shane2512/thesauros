@@ -55,24 +55,6 @@ with **RFB 5: Compliance Intelligence** as a secondary surface.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["Owner mandate<br/>(plain English)"] --> B["OpenServ drafts policy<br/>code validates every number"]
-    B --> C["Owner reviews & signs"]
-    C --> D[("Signed policy")]
-    subgraph Loop["Autonomous loop · every few minutes"]
-        E["Deterministic context<br/>balances · forecast · recipients"] --> F["Agent proposes<br/>pay · deposit · redeem · hold"]
-        F --> G{"Policy Engine<br/>pure, no I/O"}
-        G -- ALLOW --> H["Simulation gate<br/>Multicall3From"]
-        H -- deltas match --> I["Executor<br/>Circle Wallets on Arc"]
-        G -- DENY / ESCALATE --> J["Blocked or sent<br/>to owner approval"]
-    end
-    D --> G
-    I --> K[("Hash-chained<br/>audit log")]
-    J --> K
-    O["Owner: Freeze · Revoke · Sweep home"] -. never calls the AI .-> I
-```
-
 <img src="docs/assets/thesauros-user-flow.png" alt="Thesauros user flow: onboarding, autonomous loop, owner controls" width="100%" />
 
 | Stage | What happens |
